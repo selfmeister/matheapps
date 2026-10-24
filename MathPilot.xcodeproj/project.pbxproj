@@ -19,7 +19,6 @@
 		A1234567890ABCDEF1234585 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234584 /* Localization.swift */; };
 		A1234567890ABCDEF1234587 /* AppBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234586 /* AppBrand.swift */; };
 		A1234567890ABCDEF1234589 /* CurriculumSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234588 /* CurriculumSettings.swift */; };
-		A1234567890ABCDEF12345A7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF12345A9 /* PrivacyInfo.xcprivacy */; };
 		A1234567890ABCDEF1234591 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234568 /* ContentView.swift */; };
 		A1234567890ABCDEF1234592 /* GameManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF123457A /* GameManager.swift */; };
 		A1234567890ABCDEF1234593 /* GameViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF123457C /* GameViews.swift */; };
@@ -32,6 +31,7 @@
 		A1234567890ABCDEF123459B /* AppBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234586 /* AppBrand.swift */; };
 		A1234567890ABCDEF123459C /* CurriculumSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234588 /* CurriculumSettings.swift */; };
 		A1234567890ABCDEF12345A5 /* MathMagicApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF12345A6 /* MathMagicApp.swift */; };
+		A1234567890ABCDEF12345A7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF12345A9 /* PrivacyInfo.xcprivacy */; };
 		A1234567890ABCDEF12345A8 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF12345A9 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
@@ -383,11 +383,12 @@
 				DEVELOPMENT_TEAM = 6TN58RP29N;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = MathPilot;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -412,11 +413,12 @@
 				DEVELOPMENT_TEAM = 6TN58RP29N;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = MathPilot;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

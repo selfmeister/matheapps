@@ -12,5 +12,11 @@
 	<false/>
 	<key>signingStyle</key>
 	<string>automatic</string>
+	<key>authenticationKeyID</key>
+	<string>8662UN3DY5</string>
+	<key>authenticationKeyIssuerID</key>
+	<string>0692ed30-d1b5-49de-8a29-caec613b4de9</string>
+	<key>authenticationKeyPath</key>
+	<string>/Users/me/.appstoreconnect/private_keys/AuthKey_8662UN3DY5.p8</string>
 </dict>
 </plist>

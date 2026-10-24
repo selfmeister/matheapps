@@ -398,7 +398,6 @@ class GameManager: ObservableObject {
 
         removeCurrentCorrectNumber()
         scheduleNextCorrectSpawn()
-        ensureCorrectMissileAppearsSoon()
     }
 
     private func generateFeedbackPracticeProblem() {
@@ -424,7 +423,6 @@ class GameManager: ObservableObject {
 
         removeCurrentCorrectNumber()
         scheduleNextCorrectSpawn()
-        ensureCorrectMissileAppearsSoon()
     }
 
     private func generateNewMissionProblem() {
@@ -472,7 +470,6 @@ class GameManager: ObservableObject {
 
         removeCurrentCorrectNumber()
         scheduleNextCorrectSpawn()
-        ensureCorrectMissileAppearsSoon()
     }
 
     private func advanceMissionAfterAnswered(isCorrect: Bool, responseTimeMs: Int) {
@@ -1021,7 +1018,7 @@ class GameManager: ObservableObject {
     }
 
     private func scheduleNextCorrectSpawn() {
-        scheduleNextCorrectSpawn(after: Double.random(in: 0.12...0.28))
+        scheduleNextCorrectSpawn(after: currentSpawnInterval * Double.random(in: 0.6...4.2))
     }
 
     private func scheduleNextCorrectSpawn(after delay: TimeInterval) {
@@ -3568,13 +3565,15 @@ struct AnalyticsStageSummary: Identifiable {
 }
 
 private struct AnalyticsEngine {
+    static let minimumAttemptsForSummary = 4
+
     let records: [AnalyticsRecord]
 
     func stageSummaries(in language: AppLanguage) -> [AnalyticsStageSummary] {
         let buckets = stageBuckets
 
         return AnalyticsBucketKey.displayOrder.compactMap { key in
-            guard let bucketRecords = buckets[key], !bucketRecords.isEmpty else { return nil }
+            guard let bucketRecords = buckets[key], bucketRecords.count >= Self.minimumAttemptsForSummary else { return nil }
 
             let correctCount = bucketRecords.filter(\.isCorrect).count
             let retryRecords = bucketRecords.filter(\.wasRetry)
