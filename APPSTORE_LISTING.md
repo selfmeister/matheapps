@@ -110,7 +110,7 @@ progress dashboard. No ads, no tracking — just math and fun.
 - The app is fully self-contained; no login or demo account needed.
 - Tap "Start Game" on the main screen to begin immediately.
 - The app uses only on-device UserDefaults storage; no network calls.
-- Privacy policy URL: <INSERT PUBLIC URL HERE>
+- Privacy policy URL: https://selfmeister.github.io/matheapps/MathPilot/PRIVACY_POLICY.html
 - Contact: synth.bueschel0@icloud.com
 
 ## Screenshots
@@ -123,10 +123,8 @@ Located in ./screenshots/ — required sizes covered:
 Optional: add captions/frames with a tool like Figma or screenshots.pro
 before upload for a more polished listing.
 
-## Privacy policy hosting
+## Privacy policy hosting — DONE
 
-PRIVACY_POLICY.md must be reachable at a public URL. Cheapest options:
-1. GitHub repo + GitHub Pages → https://<user>.github.io/<repo>/PRIVACY_POLICY
-2. Any static host (Netlify Drop, Cloudflare Pages)
-Paste the final URL into App Store Connect > App Privacy > Privacy Policy URL
-and into the review notes above.
+Live at https://selfmeister.github.io/matheapps/MathPilot/PRIVACY_POLICY.html
+(GitHub Pages, rendered from MathPilot/PRIVACY_POLICY.md on main).
+Paste it into App Store Connect > App Privacy > Privacy Policy URL.
