@@ -1,0 +1,528 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A1234567890ABCDEF1234567 /* MathPilotApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234566 /* MathPilotApp.swift */; };
+		A1234567890ABCDEF1234569 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234568 /* ContentView.swift */; };
+		A1234567890ABCDEF123456B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF123456A /* Assets.xcassets */; };
+		A1234567890ABCDEF123456E /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF123456D /* Preview Assets.xcassets */; };
+		A1234567890ABCDEF1234579 /* GameManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF123457A /* GameManager.swift */; };
+		A1234567890ABCDEF123457B /* GameViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF123457C /* GameViews.swift */; };
+		A1234567890ABCDEF123457D /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF123457E /* SoundManager.swift */; };
+		A1234567890ABCDEF1234581 /* bomb.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234580 /* bomb.mp4 */; };
+		A1234567890ABCDEF1234583 /* bomb_explosion.wav in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234582 /* bomb_explosion.wav */; };
+		A1234567890ABCDEF1234585 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234584 /* Localization.swift */; };
+		A1234567890ABCDEF1234587 /* AppBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234586 /* AppBrand.swift */; };
+		A1234567890ABCDEF1234589 /* CurriculumSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234588 /* CurriculumSettings.swift */; };
+		A1234567890ABCDEF12345A7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF12345A9 /* PrivacyInfo.xcprivacy */; };
+		A1234567890ABCDEF1234591 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234568 /* ContentView.swift */; };
+		A1234567890ABCDEF1234592 /* GameManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF123457A /* GameManager.swift */; };
+		A1234567890ABCDEF1234593 /* GameViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF123457C /* GameViews.swift */; };
+		A1234567890ABCDEF1234594 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF123457E /* SoundManager.swift */; };
+		A1234567890ABCDEF1234595 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234584 /* Localization.swift */; };
+		A1234567890ABCDEF1234596 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF123456A /* Assets.xcassets */; };
+		A1234567890ABCDEF1234597 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF123456D /* Preview Assets.xcassets */; };
+		A1234567890ABCDEF1234598 /* bomb.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234580 /* bomb.mp4 */; };
+		A1234567890ABCDEF1234599 /* bomb_explosion.wav in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234582 /* bomb_explosion.wav */; };
+		A1234567890ABCDEF123459B /* AppBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234586 /* AppBrand.swift */; };
+		A1234567890ABCDEF123459C /* CurriculumSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF1234588 /* CurriculumSettings.swift */; };
+		A1234567890ABCDEF12345A5 /* MathMagicApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF12345A6 /* MathMagicApp.swift */; };
+		A1234567890ABCDEF12345A8 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF12345A9 /* PrivacyInfo.xcprivacy */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A1234567890ABCDEF1234563 /* MathPilot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MathPilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1234567890ABCDEF1234566 /* MathPilotApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathPilotApp.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF1234568 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF123456A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A1234567890ABCDEF123456D /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		A1234567890ABCDEF123457A /* GameManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameManager.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF123457C /* GameViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViews.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF123457E /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF1234580 /* bomb.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = bomb.mp4; sourceTree = "<group>"; };
+		A1234567890ABCDEF1234582 /* bomb_explosion.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = bomb_explosion.wav; sourceTree = "<group>"; };
+		A1234567890ABCDEF1234584 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF1234586 /* AppBrand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBrand.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF1234588 /* CurriculumSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurriculumSettings.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF123459A /* MathMagic.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MathMagic.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1234567890ABCDEF12345A6 /* MathMagicApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathMagicApp.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF12345A9 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A1234567890ABCDEF1234560 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1234567890ABCDEF123459D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A1234567890ABCDEF123455A = {
+			isa = PBXGroup;
+			children = (
+				A1234567890ABCDEF1234565 /* MathPilot */,
+				A1234567890ABCDEF1234564 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A1234567890ABCDEF1234564 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A1234567890ABCDEF1234563 /* MathPilot.app */,
+				A1234567890ABCDEF123459A /* MathMagic.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A1234567890ABCDEF1234565 /* MathPilot */ = {
+			isa = PBXGroup;
+			children = (
+				A1234567890ABCDEF1234566 /* MathPilotApp.swift */,
+				A1234567890ABCDEF12345A6 /* MathMagicApp.swift */,
+				A1234567890ABCDEF1234568 /* ContentView.swift */,
+				A1234567890ABCDEF123457A /* GameManager.swift */,
+				A1234567890ABCDEF123457C /* GameViews.swift */,
+				A1234567890ABCDEF123457E /* SoundManager.swift */,
+				A1234567890ABCDEF1234584 /* Localization.swift */,
+				A1234567890ABCDEF1234586 /* AppBrand.swift */,
+				A1234567890ABCDEF1234588 /* CurriculumSettings.swift */,
+				A1234567890ABCDEF12345A9 /* PrivacyInfo.xcprivacy */,
+				A1234567890ABCDEF1234580 /* bomb.mp4 */,
+				A1234567890ABCDEF1234582 /* bomb_explosion.wav */,
+				A1234567890ABCDEF123456A /* Assets.xcassets */,
+				A1234567890ABCDEF123456F /* Preview Content */,
+			);
+			path = MathPilot;
+			sourceTree = "<group>";
+		};
+		A1234567890ABCDEF123456F /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				A1234567890ABCDEF123456D /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A1234567890ABCDEF1234562 /* MathPilot */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1234567890ABCDEF1234572 /* Build configuration list for PBXNativeTarget "MathPilot" */;
+			buildPhases = (
+				A1234567890ABCDEF123455F /* Sources */,
+				A1234567890ABCDEF1234560 /* Frameworks */,
+				A1234567890ABCDEF1234561 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MathPilot;
+			productName = MathPilot;
+			productReference = A1234567890ABCDEF1234563 /* MathPilot.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A1234567890ABCDEF123459E /* MathMagic */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1234567890ABCDEF12345A2 /* Build configuration list for PBXNativeTarget "MathMagic" */;
+			buildPhases = (
+				A1234567890ABCDEF12345A0 /* Sources */,
+				A1234567890ABCDEF123459D /* Frameworks */,
+				A1234567890ABCDEF123459F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MathMagic;
+			productName = MathMagic;
+			productReference = A1234567890ABCDEF123459A /* MathMagic.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A1234567890ABCDEF123455B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					A1234567890ABCDEF1234562 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					A1234567890ABCDEF123459E = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = A1234567890ABCDEF123455E /* Build configuration list for PBXProject "MathPilot" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A1234567890ABCDEF123455A;
+			productRefGroup = A1234567890ABCDEF1234564 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A1234567890ABCDEF1234562 /* MathPilot */,
+				A1234567890ABCDEF123459E /* MathMagic */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A1234567890ABCDEF1234561 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1234567890ABCDEF123456E /* Preview Assets.xcassets in Resources */,
+				A1234567890ABCDEF123456B /* Assets.xcassets in Resources */,
+				A1234567890ABCDEF12345A7 /* PrivacyInfo.xcprivacy in Resources */,
+				A1234567890ABCDEF1234581 /* bomb.mp4 in Resources */,
+				A1234567890ABCDEF1234583 /* bomb_explosion.wav in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1234567890ABCDEF123459F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1234567890ABCDEF1234597 /* Preview Assets.xcassets in Resources */,
+				A1234567890ABCDEF1234596 /* Assets.xcassets in Resources */,
+				A1234567890ABCDEF12345A8 /* PrivacyInfo.xcprivacy in Resources */,
+				A1234567890ABCDEF1234598 /* bomb.mp4 in Resources */,
+				A1234567890ABCDEF1234599 /* bomb_explosion.wav in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A1234567890ABCDEF123455F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1234567890ABCDEF1234579 /* GameManager.swift in Sources */,
+				A1234567890ABCDEF123457B /* GameViews.swift in Sources */,
+				A1234567890ABCDEF123457D /* SoundManager.swift in Sources */,
+				A1234567890ABCDEF1234585 /* Localization.swift in Sources */,
+				A1234567890ABCDEF1234587 /* AppBrand.swift in Sources */,
+				A1234567890ABCDEF1234589 /* CurriculumSettings.swift in Sources */,
+				A1234567890ABCDEF1234569 /* ContentView.swift in Sources */,
+				A1234567890ABCDEF1234567 /* MathPilotApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A1234567890ABCDEF12345A0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1234567890ABCDEF1234592 /* GameManager.swift in Sources */,
+				A1234567890ABCDEF1234593 /* GameViews.swift in Sources */,
+				A1234567890ABCDEF1234594 /* SoundManager.swift in Sources */,
+				A1234567890ABCDEF1234595 /* Localization.swift in Sources */,
+				A1234567890ABCDEF123459B /* AppBrand.swift in Sources */,
+				A1234567890ABCDEF123459C /* CurriculumSettings.swift in Sources */,
+				A1234567890ABCDEF1234591 /* ContentView.swift in Sources */,
+				A1234567890ABCDEF12345A5 /* MathMagicApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A1234567890ABCDEF1234570 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A1234567890ABCDEF1234571 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A1234567890ABCDEF1234573 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"MathPilot/Preview Content\"";
+				DEVELOPMENT_TEAM = 6TN58RP29N;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mathpilot.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A1234567890ABCDEF1234574 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"MathPilot/Preview Content\"";
+				DEVELOPMENT_TEAM = 6TN58RP29N;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mathpilot.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A1234567890ABCDEF12345A3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIconUnicorn;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"MathPilot/Preview Content\"";
+				DEVELOPMENT_TEAM = 6TN58RP29N;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = MathMagic;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mathpilot.mathmagic.dev;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "UNICORN_APP $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A1234567890ABCDEF12345A4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIconUnicorn;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"MathPilot/Preview Content\"";
+				DEVELOPMENT_TEAM = 6TN58RP29N;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = MathMagic;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mathpilot.mathmagic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "UNICORN_APP $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A1234567890ABCDEF123455E /* Build configuration list for PBXProject "MathPilot" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1234567890ABCDEF1234570 /* Debug */,
+				A1234567890ABCDEF1234571 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1234567890ABCDEF1234572 /* Build configuration list for PBXNativeTarget "MathPilot" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1234567890ABCDEF1234573 /* Debug */,
+				A1234567890ABCDEF1234574 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1234567890ABCDEF12345A2 /* Build configuration list for PBXNativeTarget "MathMagic" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1234567890ABCDEF12345A3 /* Debug */,
+				A1234567890ABCDEF12345A4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A1234567890ABCDEF123455B /* Project object */;
+}
