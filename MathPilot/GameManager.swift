@@ -1029,15 +1029,17 @@ class GameManager: ObservableObject {
     private func ensureCorrectMissileAppearsSoon() {
         guard !hasCorrectFlyingNumber else { return }
 
-        if flyingNumbers.count >= maximumFlyingNumbers,
-           let wrongIndex = flyingNumbers.enumerated()
-            .filter({ !$0.element.isCorrect })
-            .min(by: { $0.element.position.y < $1.element.position.y })?
-            .offset {
-            flyingNumbers.remove(at: wrongIndex)
+        if flyingNumbers.count < maximumFlyingNumbers {
+            spawnFlyingNumber(forceCorrect: true)
+            return
         }
 
-        if flyingNumbers.count < maximumFlyingNumbers {
+        if Date() > earliestCorrectSpawnDate.addingTimeInterval(6),
+           let wrongIndex = flyingNumbers.enumerated()
+            .filter({ !$0.element.isCorrect })
+            .max(by: { $0.element.position.y < $1.element.position.y })?
+            .offset {
+            flyingNumbers.remove(at: wrongIndex)
             spawnFlyingNumber(forceCorrect: true)
         }
     }
