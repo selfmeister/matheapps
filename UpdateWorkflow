@@ -1,0 +1,17 @@
+For future updates
+
+1. **Make the changes** and test the affected features, including German and English.
+2. **Increase the build number** for each upload. Increase the app version for a new public release—for example, `1.0 → 1.1`.
+3. **Run regression tests**, then create a signed Release archive.
+4. **Upload to App Store Connect.** From the parent `MatheApps` folder:
+   ```bash
+   BUILD_NUMBER=3 ./ship.sh
+   ```
+   This archives and uploads; it does **not** submit for review or publish.
+5. **Test the uploaded build through TestFlight**, ideally on a real iPhone and iPad.
+6. **Prepare the App Store version:** select the build, add release notes in both languages, and update screenshots or privacy information if needed.
+7. **Submit for review**, then release after approval.
+
+Your current prepared release is **1.0, build 2**, still local.
+
+You can ask me: “Implement these updates and prepare the next release.” I can handle changes, tests, versioning, and packaging; explicitly include “upload to TestFlight” when you want the upload too.

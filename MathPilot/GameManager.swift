@@ -79,6 +79,8 @@ class GameManager: ObservableObject {
     private var laneSpeeds: [Double] = [0.48, 0.54, 0.60]
     private var lastCorrectLane: Int?
     private var missedCorrectAnswerCount = 0
+    private var currentProblemHasAttempt = false
+    private var feedbackAnswerInFlight = false
     private var currentProblemPresentedAt = Date()
     private var recentProblemPrompts: [String] = []
     private var currentProblemStage: DifficultyStage = .singleDigit
@@ -100,17 +102,68 @@ class GameManager: ObservableObject {
     private var divisionProblemDecks: [String: [MultiplicationFact]] = [:]
     private var missionProblemDeck: [SpecialMissionProblem] = []
     private var currentMissionProblem: SpecialMissionProblem?
-    private var missionPhaseAttempts = 0
-    private var missionPhaseCorrect = 0
-    private var missionStartDate = Date()
+    @Published private(set) var missionPhaseCorrect = 0
+    @Published private(set) var missionFeedbackVisible = false
+    private var missionContinuation: (() -> Void)?
+    private var missionFeedbackWorkItem: DispatchWorkItem?
+    private var missionGuidedStep = false
+    private var missionQuestionHadError = false
+    private var missionResponseTimes: [Int] = []
+    private var missionBackgroundedAt: Date?
+
+    var missionProgressText: String? {
+        guard let session = activeSpecialMission else { return nil }
+        let german = currentAppLanguage == .german
+        let title: String
+        switch session.phase {
+        case .discoverPattern: title = german ? "Entdecken" : "Discover"
+        case .unlockStrategy: title = german ? "Gemeinsam üben" : "Guided practice"
+        case .focusedPractice: title = german ? "Üben" : "Practice"
+        case .transferChallenge: title = german ? "Anwenden" : "Apply"
+        case .bossFight: title = german ? "Boss" : "Boss"
+        }
+        return "\(title) · \(min(missionPhaseCorrect, session.phase.problemTarget))/\(session.phase.problemTarget)"
+    }
+
+    var missionPhaseIndex: Int {
+        guard let phase = activeSpecialMission?.phase else { return 0 }
+        return [.discoverPattern, .unlockStrategy, .focusedPractice, .transferChallenge, .bossFight]
+            .firstIndex(of: phase) ?? 0
+    }
+
+    func continueMission() {
+        guard missionFeedbackVisible, gameStarted, missionBackgroundedAt == nil else { return }
+        missionFeedbackWorkItem?.cancel()
+        missionFeedbackWorkItem = nil
+        missionFeedbackVisible = false
+        let continuation = missionContinuation
+        missionContinuation = nil
+        continuation?()
+    }
+
+    private func missionFeedback(_ text: String, automatic: Bool, next: @escaping () -> Void) {
+        flyingNumbers.removeAll()
+        missionStrategyHint = text
+        missionFeedbackVisible = true
+        missionContinuation = next
+        if automatic {
+            let work = DispatchWorkItem { [weak self] in self?.continueMission() }
+            missionFeedbackWorkItem = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.4, execute: work)
+        }
+    }
+
     private var savedGameModeBeforeMission: GameMode?
     private var activeFeedbackPractice: FeedbackPracticeSession?
-    private var bossShotWorkItem: DispatchWorkItem?
-    private var missionHintToken = UUID()
     
     func setupGame(size: CGSize, reservedTopArea: CGFloat = 0) {
         self.screenSize = size
         self.reservedTopAreaHeight = reservedTopArea
+        if activeSpecialMission != nil {
+            for index in flyingNumbers.indices {
+                flyingNumbers[index].position = missionChoicePosition(lane: flyingNumbers[index].lane)
+            }
+        }
         if soundManager == nil {
             self.soundManager = SoundManager()
         }
@@ -125,13 +178,7 @@ class GameManager: ObservableObject {
     func configureBossShooting(enabled: Bool) {
         bossShootingEnabled = enabled
 
-        if enabled {
-            if bossFightState == .active, bossShotWorkItem == nil {
-                scheduleBossShotEffect()
-            }
-        } else {
-            bossShotWorkItem?.cancel()
-            bossShotWorkItem = nil
+        if !enabled {
             projectiles.removeAll { $0.kind == .enemyShot }
         }
     }
@@ -139,11 +186,18 @@ class GameManager: ObservableObject {
     func pauseForAppBackground() {
         guard gameStarted, !gameOver else { return }
         stopTimers()
+        missionFeedbackWorkItem?.cancel()
+        missionFeedbackWorkItem = nil
+        if activeSpecialMission != nil, missionBackgroundedAt == nil { missionBackgroundedAt = Date() }
         soundManager?.stopAllSounds()
     }
 
     func resumeFromAppBackground() {
         guard gameStarted, !gameOver, activeCelebration == nil else { return }
+        if let pausedAt = missionBackgroundedAt {
+            currentProblemPresentedAt = currentProblemPresentedAt.addingTimeInterval(Date().timeIntervalSince(pausedAt))
+            missionBackgroundedAt = nil
+        }
         if soundEnabled {
             soundManager?.startAmbientSound(for: vehicleType)
         }
@@ -167,16 +221,13 @@ class GameManager: ObservableObject {
         activeSpecialMission = SpecialMissionSession(mission: mission, phase: .discoverPattern)
         strategyIntroMission = mission
         missionProblemDeck = []
-        missionPhaseAttempts = 0
         missionPhaseCorrect = 0
-        missionStartDate = Date()
         missionCompleted = false
         recommendedMission = nil
         bossEntity = nil
         bossFightState = .inactive
-        bossShotWorkItem?.cancel()
-        bossShotWorkItem = nil
         gameMode = mission.defaultGameMode
+        missionResponseTimes.removeAll()
         markMissionStarted(mission)
     }
 
@@ -192,8 +243,6 @@ class GameManager: ObservableObject {
         strategyIntroMission = nil
         bossEntity = nil
         bossFightState = .inactive
-        bossShotWorkItem?.cancel()
-        bossShotWorkItem = nil
         missionStrategyHint = nil
         if let savedGameModeBeforeMission {
             gameMode = savedGameModeBeforeMission
@@ -208,19 +257,20 @@ class GameManager: ObservableObject {
         clampAdaptiveStageIndexes()
     }
 
-    func analyticsSuggestions(in language: AppLanguage) -> [String] {
-        AnalyticsEngine(records: analyticsRecords).suggestions(in: language)
-    }
-
     func analyticsStageSummaries(in language: AppLanguage) -> [AnalyticsStageSummary] {
         AnalyticsEngine(records: analyticsRecords).stageSummaries(in: language)
     }
 
+    var feedbackPracticeProgress: (current: Int, total: Int)? {
+        guard let session = activeFeedbackPractice else { return nil }
+        return (session.completed + 1, session.problems.count)
+    }
+
     func startFeedbackPractice(from record: AnalyticsRecord) {
         guard !gameStarted else { return }
-        activeFeedbackPractice = FeedbackPracticeSession(record: record)
-        feedbackPracticeResult = nil
         gameMode = record.mode
+        activeFeedbackPractice = FeedbackPracticeSession(record: record, problems: makeFeedbackProblems(from: record))
+        feedbackPracticeResult = nil
         startGame()
     }
     
@@ -243,6 +293,7 @@ class GameManager: ObservableObject {
         laneSpeeds = makeLaneSpeeds()
         lastCorrectLane = nil
         missedCorrectAnswerCount = 0
+        currentProblemHasAttempt = false
         recentProblemPrompts.removeAll()
         multiplicationProblemDecks.removeAll()
         divisionProblemDecks.removeAll()
@@ -269,6 +320,12 @@ class GameManager: ObservableObject {
     }
     
     func resetGame() {
+        missionFeedbackWorkItem?.cancel()
+        missionFeedbackWorkItem = nil
+        missionContinuation = nil
+        missionFeedbackVisible = false
+        missionBackgroundedAt = nil
+        missionResponseTimes.removeAll()
         if let savedGameModeBeforeMission {
             gameMode = savedGameModeBeforeMission
         }
@@ -276,13 +333,10 @@ class GameManager: ObservableObject {
         strategyIntroMission = nil
         bossEntity = nil
         bossFightState = .inactive
-        bossShotWorkItem?.cancel()
-        bossShotWorkItem = nil
         savedGameModeBeforeMission = nil
         missionProblemDeck.removeAll()
         currentMissionProblem = nil
         missionStrategyHint = nil
-        missionPhaseAttempts = 0
         missionPhaseCorrect = 0
         activeFeedbackPractice = nil
         feedbackPracticeResult = nil
@@ -307,6 +361,7 @@ class GameManager: ObservableObject {
         laneSpeeds = makeLaneSpeeds()
         lastCorrectLane = nil
         missedCorrectAnswerCount = 0
+        currentProblemHasAttempt = false
         recentProblemPrompts.removeAll()
         divisionProblemDecks.removeAll()
         currentProblemStage = currentDifficultyStage
@@ -374,6 +429,7 @@ class GameManager: ObservableObject {
         }
 
         missedCorrectAnswerCount = 0
+        currentProblemHasAttempt = false
         laneSpeeds = makeLaneSpeeds()
         nextSpawnAllowedDate = Date()
 
@@ -400,10 +456,34 @@ class GameManager: ObservableObject {
         scheduleNextCorrectSpawn()
     }
 
+    private func makeFeedbackProblems(from record: AnalyticsRecord) -> [ArithmeticProblem] {
+        var problems: [ArithmeticProblem] = [.custom(prompt: record.problem, result: record.correctAnswer)]
+        for _ in 0..<100 where problems.count < 5 {
+            let numbers = record.problem.components(separatedBy: CharacterSet.decimalDigits.inverted).compactMap(Int.init)
+            let problem: ArithmeticProblem
+            if numbers.count >= 2, record.mode == .multiplication {
+                let factor = curriculumSettings.normalizedMultiplicationFactors.randomElement() ?? 2
+                problem = makeMultiplicationProblem(table: numbers[0], factor: factor)
+            } else if numbers.count >= 2, record.mode == .division {
+                let factor = curriculumSettings.normalizedMultiplicationFactors.randomElement() ?? 2
+                problem = makeDivisionProblem(table: numbers[1], factor: factor)
+            } else {
+                problem = generateProblem(for: record.stage, mode: record.mode, forcedPatternPhase: record.patternPhase)
+            }
+            if !problems.contains(where: { $0.prompt == problem.prompt }) {
+                problems.append(problem)
+            }
+        }
+        // Very small skills can have fewer than five distinct problems.
+        while problems.count < 5 { problems.append(problems[0]) }
+        return problems
+    }
+
     private func generateFeedbackPracticeProblem() {
         guard let session = activeFeedbackPractice else { return }
-
+        feedbackAnswerInFlight = false
         missedCorrectAnswerCount = 0
+        currentProblemHasAttempt = false
         laneSpeeds = makeLaneSpeeds()
         nextSpawnAllowedDate = Date()
         gameMode = session.record.mode
@@ -412,49 +492,30 @@ class GameManager: ObservableObject {
         currentProblemPatternPhase = session.record.patternPhase
         currentTargetPatternPhase = session.record.patternPhase
         currentAdaptiveClusterKey = "feedback.\(session.record.id.uuidString)"
-        currentArithmeticProblem = ArithmeticProblem.custom(
-            prompt: session.record.problem,
-            result: session.record.correctAnswer
-        )
-        correctAnswer = session.record.correctAnswer
-        currentProblem = session.record.problem
+        let problem = session.problems[session.completed]
+        currentArithmeticProblem = problem
+        correctAnswer = problem.result
+        currentProblem = problem.prompt
         currentProblemPresentedAt = Date()
-        scheduleProblemTimer()
-
+        // Practice advances only after a correct answer.
+        problemTimer?.invalidate()
         removeCurrentCorrectNumber()
         scheduleNextCorrectSpawn()
     }
 
     private func generateNewMissionProblem() {
         guard let session = activeSpecialMission else { return }
-
-        missedCorrectAnswerCount = 0
-        laneSpeeds = makeLaneSpeeds()
-        nextSpawnAllowedDate = Date()
         missionStrategyHint = nil
-
-        if session.phase == .bossFight, bossEntity == nil {
-            startBossFight(for: session.mission)
-        }
-
+        missionQuestionHadError = false
+        currentProblemHasAttempt = false
         if missionProblemDeck.isEmpty {
-            missionProblemDeck = SpecialMissionProblem.makeProblems(
-                for: session.mission,
-                phase: session.phase
-            )
-
-            if session.phase == .focusedPractice || session.phase == .bossFight {
-                missionProblemDeck.shuffle()
-            } else {
-                missionProblemDeck.reverse()
-            }
+            let phase: SpecialMissionPhase = session.phase == .bossFight ? .transferChallenge : session.phase
+            var problems = SpecialMissionProblem.makeProblems(for: session.mission, phase: phase)
+            // The boss tests later transfer examples, rather than repeating the preceding round.
+            if session.phase == .bossFight { problems = Array(problems.suffix(3)) }
+            missionProblemDeck = session.phase == .focusedPractice ? problems.shuffled() : problems.reversed()
         }
-
-        guard let problem = missionProblemDeck.popLast() else {
-            completeSpecialMission()
-            return
-        }
-
+        guard let problem = missionProblemDeck.popLast() else { return }
         currentMissionProblem = problem
         gameMode = problem.mode
         currentProblemStage = problem.stage
@@ -462,70 +523,111 @@ class GameManager: ObservableObject {
         currentProblemPatternPhase = nil
         currentTargetPatternPhase = nil
         currentAdaptiveClusterKey = "mission.\(session.mission.rawValue).\(session.phase.rawValue)"
-        currentArithmeticProblem = ArithmeticProblem.custom(prompt: problem.prompt, result: problem.result)
-        correctAnswer = problem.result
-        currentProblem = problem.prompt
+        if session.phase == .bossFight, bossEntity == nil {
+            startBossFight(for: session.mission)
+        }
+        presentMissionQuestion(guided: session.phase == .unlockStrategy)
+    }
+
+    private func presentMissionQuestion(guided: Bool, finishingGuide: Bool = false) {
+        guard let problem = currentMissionProblem, let session = activeSpecialMission else { return }
+        let step = guided ? problem.guidedStep(for: session.mission) : nil
+        missionGuidedStep = step != nil
+        currentProblem = step?.prompt ?? (finishingGuide ? problem.guidedFinish(for: session.mission) : problem.prompt)
+        correctAnswer = step?.answer ?? problem.result
+        currentArithmeticProblem = .custom(prompt: currentProblem, result: correctAnswer)
+        missionStrategyHint = step == nil ? nil : (currentAppLanguage == .german ? "Erst den Hilfsschritt lösen." : "Solve the helping step first.")
+        problemTimer?.invalidate()
+        pendingCorrectSpawn = false
+        flyingNumbers.removeAll()
+        projectiles.removeAll()
+        // All choices arrive together, away from the HUD and boss. No lane queue or speed tells.
+        let distractors = [-10, -3, -2, -1, 1, 2, 3, 10]
+            .map { correctAnswer + $0 }.filter { $0 >= 0 }.shuffled().prefix(2)
+        let values = ([correctAnswer] + distractors).shuffled()
+        flyingNumbers = values.enumerated().map { lane, value in
+            FlyingNumber(id: UUID(), value: value,
+                position: missionChoicePosition(lane: lane),
+                isCorrect: value == correctAnswer, speed: 0, lane: lane)
+        }
+        // Measure only the interval during which the choices can actually be selected.
         currentProblemPresentedAt = Date()
-        scheduleProblemTimer()
-
-        removeCurrentCorrectNumber()
-        scheduleNextCorrectSpawn()
+        if session.phase == .bossFight { bossFightState = .active }
     }
 
-    private func advanceMissionAfterAnswered(isCorrect: Bool, responseTimeMs: Int) {
-        guard var session = activeSpecialMission else { return }
+    private func missionChoicePosition(lane: Int) -> CGPoint {
+        CGPoint(x: screenSize.width * CGFloat(lane * 2 + 1) / 6,
+                y: min(max(reservedTopAreaHeight + 150, screenSize.height * 0.62),
+                       screenSize.height - Self.missileHeight / 2 - 20))
+    }
 
-        if session.phase == .bossFight {
-            missionPhaseAttempts += 1
-            if !isCorrect {
-                blockBossAttackAfterWrongAnswer()
-            } else if let currentMissionProblem {
-                showMissionHint(currentMissionProblem, mission: session.mission)
+    private func answerMission(_ number: FlyingNumber) {
+        guard !missionFeedbackVisible, missionBackgroundedAt == nil, let session = activeSpecialMission,
+              let problem = currentMissionProblem else { return }
+        let correct = number.value == correctAnswer
+        let elapsed = max(0, Int(Date().timeIntervalSince(currentProblemPresentedAt) * 1000))
+        missionResponseTimes.append(elapsed)
+        currentSessionAttempts += 1
+        if correct { currentSessionCorrectAnswers += 1 }
+        // Helping steps are scaffolding, not independent mastery evidence.
+        if !missionGuidedStep {
+            if session.phase == .unlockStrategy || missionQuestionHadError { currentProblemHasAttempt = true }
+            logAnalyticsEvent(chosenAnswer: number.value, isCorrect: correct, responseTimeMs: elapsed)
+        }
+        if !correct {
+            missionQuestionHadError = true
+            if session.phase == .bossFight {
+                bossFightState = .blocked
+                fireBossShotEffect()
+            }
+            let explanation = problem.workedSolution(for: session.mission)
+            missionFeedback(explanation, automatic: false) { [weak self] in
+                self?.presentMissionQuestion(guided: true)
             }
             return
         }
-
-        missionPhaseAttempts += 1
-        if isCorrect {
+        soundManager?.playExplosionSound()
+        projectiles.append(Projectile(id: UUID(), startPosition: aircraftPosition,
+            endPosition: session.phase == .bossFight
+                ? CGPoint(x: screenSize.width / 2, y: max(150, screenSize.height * 0.26)) : number.position,
+            currentPosition: aircraftPosition, progress: 0, speed: 0.11,
+            kind: .playerShot, impact: .missionHit))
+        if missionGuidedStep {
+            missionFeedback(currentProblem.replacingOccurrences(of: "?", with: String(correctAnswer)), automatic: false) { [weak self] in
+                self?.presentMissionQuestion(guided: false, finishingGuide: true)
+            }
+            return
+        }
+        let earnsProgress = !missionQuestionHadError
+        if earnsProgress {
             missionPhaseCorrect += 1
-        }
-
-        if let currentMissionProblem {
-            showMissionHint(currentMissionProblem, mission: session.mission)
-        }
-
-        guard missionPhaseAttempts >= session.phase.problemTarget else { return }
-
-        if shouldAddGuidedMissionSupport(for: session) {
-            missionProblemDeck = SpecialMissionProblem.easierRetryProblems(for: session.mission).shuffled()
-            showMissionMessage(session.mission.localizedUnlockHint(language: currentAppLanguage), duration: 3.6)
-            return
-        }
-
-        if let nextPhase = session.phase.next {
-            session.phase = nextPhase
-            activeSpecialMission = session
-            missionProblemDeck.removeAll()
-            missionPhaseAttempts = 0
-            missionPhaseCorrect = 0
-
-            if nextPhase == .unlockStrategy {
-                showMissionMessage(session.mission.localizedUnlockHint(language: currentAppLanguage), duration: 3.8)
-            } else if nextPhase == .bossFight {
-                startBossFight(for: session.mission)
-                showMissionMessage(AppCopy(language: currentAppLanguage).bossIncoming, duration: 3.4)
+            score += session.phase == .bossFight ? 20 * level : 10 * level
+            if session.phase == .bossFight, var boss = bossEntity {
+                boss.currentHP = max(0, boss.currentHP - 1)
+                boss.animationToken = UUID()
+                bossEntity = boss
+                bossFightState = boss.currentHP == 0 ? .defeated : .damaged
+                explosions.append(Explosion(id: UUID(), position: CGPoint(x: screenSize.width / 2, y: max(150, screenSize.height * 0.26)), scale: boss.currentHP == 0 ? 2.35 : 0.75, opacity: 1))
             }
-        } else {
-            completeSpecialMission(responseTimeMs: responseTimeMs)
         }
-    }
-
-    private func shouldAddGuidedMissionSupport(for session: SpecialMissionSession) -> Bool {
-        guard session.phase != .bossFight else { return false }
-        guard missionPhaseAttempts < session.phase.problemTarget + 3 else { return false }
-        guard missionPhaseAttempts >= 4 else { return false }
-        let accuracy = Double(missionPhaseCorrect) / Double(max(missionPhaseAttempts, 1))
-        return accuracy < 0.6
+        let text = problem.workedSolution(for: session.mission) + (missionQuestionHadError
+            ? (currentAppLanguage == .german ? "\nGut verbessert! Jetzt eine neue Aufgabe ohne Hilfe." : "\nGood correction! Now try a fresh question independently.") : "")
+        missionFeedback(text, automatic: session.phase != .unlockStrategy && !missionQuestionHadError) { [weak self] in
+            guard let self else { return }
+            if self.missionPhaseCorrect >= session.phase.problemTarget {
+                if let phase = session.phase.next {
+                    self.activeSpecialMission = SpecialMissionSession(mission: session.mission, phase: phase)
+                    self.missionPhaseCorrect = 0
+                    self.missionProblemDeck.removeAll()
+                } else {
+                    self.bossFightState = .reward
+                    self.score += 40 * self.level
+                    self.completeSpecialMission()
+                    return
+                }
+            }
+            self.generateNewMissionProblem()
+        }
     }
 
     private var isBossFightActive: Bool {
@@ -536,44 +638,8 @@ class GameManager: ObservableObject {
     }
 
     private func startBossFight(for mission: SpecialMissionID) {
-        let definition = BossDefinition(
-            vehicleTheme: vehicleType,
-            strategyType: mission
-        )
-        bossEntity = BossEntity(definition: definition)
-        bossFightState = .intro
-        bossShotWorkItem?.cancel()
-        bossShotWorkItem = nil
-        missionProblemDeck.removeAll()
-        missionPhaseAttempts = 0
-        missionPhaseCorrect = 0
-        soundManager?.playWrongSound()
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { [weak self] in
-            guard let self,
-                  self.activeSpecialMission?.phase == .bossFight,
-                  self.bossFightState == .intro else { return }
-            self.bossFightState = .active
-            if self.bossShootingEnabled {
-                self.fireBossShotEffect()
-                self.scheduleBossShotEffect()
-            }
-        }
-    }
-
-    private func scheduleBossShotEffect() {
-        bossShotWorkItem?.cancel()
-
-        guard isBossFightActive, bossShootingEnabled else { return }
-
-        let workItem = DispatchWorkItem { [weak self] in
-            guard let self, self.isBossFightActive else { return }
-            self.fireBossShotEffect()
-            self.scheduleBossShotEffect()
-        }
-
-        bossShotWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.68, execute: workItem)
+        bossEntity = BossEntity(definition: BossDefinition(vehicleTheme: vehicleType, strategyType: mission, maxHP: 3))
+        bossFightState = .active
     }
 
     private func fireBossShotEffect() {
@@ -604,84 +670,8 @@ class GameManager: ObservableObject {
         )
     }
 
-    private func damageBossIfNeeded() -> Bool {
-        guard activeSpecialMission?.phase == .bossFight,
-              bossFightState == .active,
-              var bossEntity else { return false }
-
-        bossEntity.currentHP = max(bossEntity.currentHP - 1, 0)
-        bossEntity.animationToken = UUID()
-        self.bossEntity = bossEntity
-        missionPhaseCorrect += 1
-        score += 20 * level
-
-        if bossEntity.currentHP == 0 {
-            bossFightState = .defeated
-            bossShotWorkItem?.cancel()
-            bossShotWorkItem = nil
-            score += 40 * level
-            explosions.append(
-                Explosion(
-                    id: UUID(),
-                    position: CGPoint(x: screenSize.width / 2, y: max(150, screenSize.height * 0.26)),
-                    scale: 2.35,
-                    opacity: 1.0
-                )
-            )
-            explosions.append(
-                Explosion(
-                    id: UUID(),
-                    position: CGPoint(x: (screenSize.width / 2) - 54, y: max(135, screenSize.height * 0.25)),
-                    scale: 1.25,
-                    opacity: 0.95
-                )
-            )
-            explosions.append(
-                Explosion(
-                    id: UUID(),
-                    position: CGPoint(x: (screenSize.width / 2) + 58, y: max(165, screenSize.height * 0.27)),
-                    scale: 1.35,
-                    opacity: 0.95
-                )
-            )
-            explosions.append(
-                Explosion(
-                    id: UUID(),
-                    position: CGPoint(x: screenSize.width / 2, y: max(205, screenSize.height * 0.32)),
-                    scale: 1.05,
-                    opacity: 0.9
-                )
-            )
-            soundManager?.playExplosionSound()
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) { [weak self] in
-                self?.bossFightState = .reward
-                self?.completeSpecialMission()
-            }
-        } else {
-            bossFightState = .damaged
-            explosions.append(
-                Explosion(
-                    id: UUID(),
-                    position: CGPoint(x: screenSize.width / 2, y: max(150, screenSize.height * 0.26)),
-                    scale: 0.75,
-                    opacity: 1.0
-                )
-            )
-            soundManager?.playExplosionSound()
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in
-                guard let self, self.isBossFightActive else { return }
-                self.bossFightState = .active
-                self.generateNewProblem()
-            }
-        }
-
-        return true
-    }
-
     private func completeFeedbackPracticeIfNeeded(at position: CGPoint) -> Bool {
-        guard let session = activeFeedbackPractice else { return false }
+        guard var session = activeFeedbackPractice else { return false }
 
         let basePoints = 10 * level
         let awardedPoints = basePoints * 2
@@ -694,10 +684,22 @@ class GameManager: ObservableObject {
             )
         )
         score += awardedPoints
+        session.completed += 1
+        if !session.currentProblemHadError { session.firstTryCorrect += 1 }
+        session.currentProblemHadError = false
+        if session.completed < session.problems.count {
+            activeFeedbackPractice = session
+            flyingNumbers.removeAll()
+            projectiles.removeAll()
+            generateFeedbackPracticeProblem()
+            return true
+        }
         feedbackPracticeResult = FeedbackPracticeResult(
             problem: session.record.problem,
-            basePoints: basePoints,
-            awardedPoints: awardedPoints
+            basePoints: basePoints * session.completed,
+            awardedPoints: awardedPoints * session.completed,
+            firstTryCorrect: session.firstTryCorrect,
+            problemCount: session.completed
         )
         activeFeedbackPractice = nil
         gameOver = true
@@ -710,53 +712,6 @@ class GameManager: ObservableObject {
         return true
     }
 
-    private func blockBossAttackAfterWrongAnswer() {
-        guard isBossFightActive else { return }
-        bossFightState = .blocked
-        if let mission = activeSpecialMission?.mission {
-            missionProblemDeck = SpecialMissionProblem.easierRetryProblems(for: mission).shuffled()
-            if let currentMissionProblem {
-                showMissionHint(currentMissionProblem, mission: mission)
-            }
-        } else {
-            missionProblemDeck.removeAll()
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) { [weak self] in
-            guard let self, self.isBossFightActive else { return }
-            self.bossFightState = .active
-            self.generateNewProblem()
-        }
-    }
-
-    private func showMissionHint(_ prompt: String, answer: Int, mission: SpecialMissionID) {
-        showMissionMessage(
-            mission.strategyVisualization(for: prompt, answer: answer, language: currentAppLanguage),
-            duration: 3.4
-        )
-    }
-
-    private func showMissionHint(_ problem: SpecialMissionProblem, mission: SpecialMissionID) {
-        showMissionMessage(
-            problem.hint ?? mission.strategyVisualization(
-                for: problem.prompt,
-                answer: problem.result,
-                language: currentAppLanguage
-            ),
-            duration: 3.8
-        )
-    }
-
-    private func showMissionMessage(_ message: String, duration: TimeInterval) {
-        let token = UUID()
-        missionHintToken = token
-        missionStrategyHint = message
-        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
-            guard let self, self.missionHintToken == token else { return }
-            self.missionStrategyHint = nil
-        }
-    }
-
     private var currentAppLanguage: AppLanguage {
         AppLanguage.storedMissionLanguage
     }
@@ -764,7 +719,7 @@ class GameManager: ObservableObject {
     private func completeSpecialMission(responseTimeMs: Int = 0) {
         guard let session = activeSpecialMission else { return }
 
-        let elapsedMs = Int(Date().timeIntervalSince(missionStartDate) * 1000)
+        let elapsedMs = missionResponseTimes.reduce(0, +)
         let attempts = max(currentSessionAttempts, 1)
         let accuracy = Double(currentSessionCorrectAnswers) / Double(attempts)
         var progress = specialMissionProgress[session.mission] ?? SpecialMissionProgress(mission: session.mission)
@@ -773,9 +728,7 @@ class GameManager: ObservableObject {
         progress.attempts += attempts
         progress.completionCount += 1
         progress.lastAccuracy = accuracy
-        progress.averageResponseTimeMs = progress.averageResponseTimeMs == 0
-            ? Double(elapsedMs / attempts)
-            : ((progress.averageResponseTimeMs + Double(elapsedMs / attempts)) / 2)
+        progress.averageResponseTimeMs = Double(elapsedMs) / Double(attempts)
         progress.recommendedByAnalysis = false
         progress.completionDate = Date()
         progress.rewardUnlocked = true
@@ -786,8 +739,6 @@ class GameManager: ObservableObject {
         missionCompleted = true
         gameOver = false
         gameStarted = false
-        bossShotWorkItem?.cancel()
-        bossShotWorkItem = nil
         stopTimers()
         soundManager?.stopAmbientSound()
         flyingNumbers.removeAll()
@@ -858,6 +809,7 @@ class GameManager: ObservableObject {
 
     private func scheduleProblemTimer() {
         problemTimer?.invalidate()
+        guard activeFeedbackPractice == nil, activeSpecialMission == nil else { return }
         problemTimer = Timer.scheduledTimer(withTimeInterval: currentProblemDuration, repeats: false) { _ in
             self.generateNewProblem()
         }
@@ -1176,6 +1128,10 @@ class GameManager: ObservableObject {
         var remainingNumbers: [FlyingNumber] = []
 
         for number in flyingNumbers {
+            if activeSpecialMission != nil {
+                remainingNumbers.append(number)
+                continue
+            }
             if !number.isCorrect && number.position.y >= dissolveHeight {
                 continue
             }
@@ -1205,6 +1161,13 @@ class GameManager: ObservableObject {
     }
     
     func tappedNumber(_ number: FlyingNumber) {
+        if activeSpecialMission != nil {
+            guard gameStarted, !missionCompleted,
+                  flyingNumbers.contains(where: { $0.id == number.id }) else { return }
+            answerMission(number)
+            return
+        }
+        guard activeFeedbackPractice == nil || !feedbackAnswerInFlight else { return }
         guard let index = flyingNumbers.firstIndex(where: { $0.id == number.id }) else {
             return
         }
@@ -1230,12 +1193,12 @@ class GameManager: ObservableObject {
             isCorrect: isCorrectAnswer,
             responseTimeMs: responseTimeMs
         )
-        advanceMissionAfterAnswered(
-            isCorrect: isCorrectAnswer,
-            responseTimeMs: responseTimeMs
-        )
 
         if isCorrectAnswer {
+            if activeFeedbackPractice != nil {
+                feedbackAnswerInFlight = true
+                problemTimer?.invalidate()
+            }
             projectiles.append(
                 Projectile(
                     id: UUID(),
@@ -1306,10 +1269,6 @@ class GameManager: ObservableObject {
     private func handleProjectileImpact(_ impact: ProjectileImpact, at position: CGPoint) {
         switch impact {
         case .correctAnswer:
-            if damageBossIfNeeded() {
-                return
-            }
-
             if completeFeedbackPracticeIfNeeded(at: position) {
                 return
             }
@@ -1381,7 +1340,7 @@ class GameManager: ObservableObject {
             pauseForRecovery()
         case .bossBlocked:
             break
-        case .bossDramaticShot:
+        case .bossDramaticShot, .missionHit:
             let explosion = Explosion(
                 id: UUID(),
                 position: position,
@@ -1404,6 +1363,7 @@ class GameManager: ObservableObject {
     }
 
     private func handleMissedProblem() {
+        guard activeFeedbackPractice == nil || !feedbackAnswerInFlight else { return }
         let responseTimeMs = Int(Date().timeIntervalSince(currentProblemPresentedAt) * 1000)
         currentSessionAttempts += 1
         logAnalyticsEvent(
@@ -1419,13 +1379,9 @@ class GameManager: ObservableObject {
             isCorrect: false,
             responseTimeMs: responseTimeMs
         )
-        advanceMissionAfterAnswered(
-            isCorrect: false,
-            responseTimeMs: responseTimeMs
-        )
 
         if activeFeedbackPractice != nil {
-            scheduleProblemTimer()
+            problemTimer?.invalidate()
             scheduleNextCorrectSpawn(after: retrySpawnDelay)
             maintainMissileFlow()
             return
@@ -1528,10 +1484,12 @@ class GameManager: ObservableObject {
             correctAnswer: correctAnswer,
             chosenAnswer: chosenAnswer,
             isCorrect: isCorrect,
-            wasRetry: missedCorrectAnswerCount > 0,
+            wasRetry: currentProblemHasAttempt,
             responseTimeMs: max(responseTimeMs, 0)
         )
 
+        currentProblemHasAttempt = true
+        if !isCorrect { activeFeedbackPractice?.currentProblemHadError = true }
         analyticsRecords.append(record)
 
         if analyticsRecords.count > 600 {
@@ -1875,7 +1833,7 @@ class GameManager: ObservableObject {
     }
 
     private func maintainMissileFlow() {
-        guard gameStarted, !gameOver else { return }
+        guard gameStarted, !gameOver, activeSpecialMission == nil else { return }
 
         if shouldSpawnCorrectNumber {
             ensureCorrectMissileAppearsSoon()
@@ -2319,15 +2277,15 @@ enum SpecialMissionPhase: String, Codable {
     var problemTarget: Int {
         switch self {
         case .discoverPattern:
-            return 6
+            return 2
         case .unlockStrategy:
             return 2
         case .focusedPractice:
-            return 10
-        case .transferChallenge:
-            return 8
-        case .bossFight:
             return 4
+        case .transferChallenge:
+            return 3
+        case .bossFight:
+            return 3
         }
     }
 
@@ -2372,7 +2330,7 @@ struct BossDefinition: Equatable {
     let introText: String
     let defeatRewardId: String
 
-    init(vehicleTheme: VehicleType, strategyType: SpecialMissionID, maxHP: Int = 4) {
+    init(vehicleTheme: VehicleType, strategyType: SpecialMissionID, maxHP: Int = 3) {
         self.id = "\(vehicleTheme.rawValue)-\(strategyType.rawValue)-boss"
         self.name = "Mission Boss"
         self.vehicleTheme = vehicleTheme
@@ -2466,6 +2424,63 @@ private struct SpecialMissionProblem {
         self.stage = stage
         self.role = role
         self.hint = hint
+    }
+
+    func guidedStep(for mission: SpecialMissionID) -> (prompt: String, answer: Int)? {
+        guard role != .ordinary else { return nil }
+        let operands = prompt.components(separatedBy: CharacterSet.decimalDigits.inverted).compactMap(Int.init)
+        guard operands.count >= 2 else { return nil }
+        let left = operands[0], right = operands[1]
+        switch mission {
+        case .friendsOf10:
+            return prompt.contains("+ ?") ? ("10 − \(left) = ?", 10 - left) : ("\(left) + ? = 10", 10 - left)
+        case .bridgingThrough10:
+            return ("\(left) + ? = 10", 10 - left)
+        case .doublesNearDoubles:
+            return ("\(left) + \(left) = ?", left * 2)
+        case .countingUp:
+            let nextTen = min(left, ((right / 10) + 1) * 10)
+            return ("\(right) + ? = \(nextTen)", nextTen - right)
+        case .bridgeDownThrough10:
+            let ten = (left / 10) * 10
+            return ("\(left) − ? = \(ten)", left - ten)
+        case .subtractTensOnes:
+            let tens = (right / 10) * 10
+            return ("\(left) − \(tens) = ?", left - tens)
+        case .subtractionCompensation:
+            let lower = (right / 10) * 10
+            let rounded = lower > 0 && right - lower <= lower + 10 - right ? lower : lower + 10
+            return ("\(left) − \(rounded) = ?", left - rounded)
+        case .nineTrick:
+            let rounded = right + 1
+            return mode == .addition ? ("\(left) + \(rounded) = ?", left + rounded) : ("\(left) − \(rounded) = ?", left - rounded)
+        }
+    }
+
+    func guidedFinish(for mission: SpecialMissionID) -> String {
+        guard let step = guidedStep(for: mission) else { return prompt }
+        let operands = prompt.components(separatedBy: CharacterSet.decimalDigits.inverted).compactMap(Int.init)
+        let left = operands[0], right = operands[1]
+        switch mission {
+        case .friendsOf10: return prompt.contains("+ ?") ? prompt : "10 + \(right - step.answer) = ?"
+        case .bridgingThrough10: return "10 + \(right - step.answer) = ?"
+        case .doublesNearDoubles: return "\(step.answer) + \(right - left) = ?"
+        case .countingUp: return "\(step.answer) + \(result - step.answer) = ?"
+        case .bridgeDownThrough10: return "\(left - step.answer) − \(right - step.answer) = ?"
+        case .subtractTensOnes: return "\(step.answer) − \(right % 10) = ?"
+        case .subtractionCompensation:
+            let correction = result - step.answer
+            return "\(step.answer) \(correction >= 0 ? "+" : "−") \(abs(correction)) = ?"
+        case .nineTrick: return "\(step.answer) \(mode == .addition ? "−" : "+") 1 = ?"
+        }
+    }
+
+    func workedSolution(for mission: SpecialMissionID) -> String {
+        let solved = prompt.replacingOccurrences(of: "?", with: String(result))
+        guard let step = guidedStep(for: mission) else { return solved }
+        let helping = step.prompt.replacingOccurrences(of: "?", with: String(step.answer))
+        let finish = guidedFinish(for: mission).replacingOccurrences(of: "?", with: String(result))
+        return helping + "\n" + finish
     }
 
     static func makeProblems(for mission: SpecialMissionID, phase: SpecialMissionPhase) -> [SpecialMissionProblem] {
@@ -3012,6 +3027,7 @@ enum ProjectileImpact {
     case playerHit
     case bossBlocked
     case bossDramaticShot
+    case missionHit
 }
 
 enum GameMode: String, CaseIterable, Identifiable, Codable {
@@ -3144,7 +3160,7 @@ enum MultiplicationLearningPhase: String, Codable {
     var title: String {
         switch self {
         case .intro:
-            return "Intro Facts"
+            return "First number facts"
         case .fullTable:
             return "Full Table"
         case .commutativeSwap:
@@ -3505,6 +3521,7 @@ struct AnalyticsRecord: Codable, Identifiable {
     let isCorrect: Bool
     let wasRetry: Bool
     let responseTimeMs: Int
+    var measurementVersion: Int?
 
     init(
         id: UUID = UUID(),
@@ -3519,6 +3536,7 @@ struct AnalyticsRecord: Codable, Identifiable {
         wasRetry: Bool,
         responseTimeMs: Int
     ) {
+        self.measurementVersion = 2
         self.id = id
         self.timestamp = timestamp
         self.mode = mode
@@ -3548,12 +3566,18 @@ struct AnalyticsRecord: Codable, Identifiable {
 
 private struct FeedbackPracticeSession {
     let record: AnalyticsRecord
+    let problems: [ArithmeticProblem]
+    var completed = 0
+    var firstTryCorrect = 0
+    var currentProblemHadError = false
 }
 
 struct FeedbackPracticeResult: Equatable {
     let problem: String
     let basePoints: Int
     let awardedPoints: Int
+    let firstTryCorrect: Int
+    let problemCount: Int
 }
 
 struct AnalyticsStageSummary: Identifiable {
@@ -3564,6 +3588,9 @@ struct AnalyticsStageSummary: Identifiable {
     let retrySuccessRate: Double
     let attempts: Int
     let feedbackTarget: AnalyticsRecord?
+    let correctFirstAttempts: Int
+    let retryAttempts: Int
+    let previousAccuracy: Double?
 }
 
 private struct AnalyticsEngine {
@@ -3575,12 +3602,16 @@ private struct AnalyticsEngine {
         let buckets = stageBuckets
 
         return AnalyticsBucketKey.displayOrder.compactMap { key in
-            guard let bucketRecords = buckets[key], bucketRecords.count >= Self.minimumAttemptsForSummary else { return nil }
-
-            let correctCount = bucketRecords.filter(\.isCorrect).count
+            guard let history = buckets[key] else { return nil }
+            let firstAttempts = history.filter { !$0.wasRetry }
+            guard firstAttempts.count >= Self.minimumAttemptsForSummary else { return nil }
+            let recent = Array(firstAttempts.suffix(20))
+            let bucketRecords = history.filter { $0.timestamp >= recent[0].timestamp }
+            let previous = Array(firstAttempts.dropLast(recent.count).suffix(20))
+            let correctCount = recent.filter(\.isCorrect).count
             let retryRecords = bucketRecords.filter(\.wasRetry)
             let retrySuccessCount = retryRecords.filter(\.isCorrect).count
-            let averageResponseTime = Double(bucketRecords.map(\.responseTimeMs).reduce(0, +)) / Double(bucketRecords.count)
+            let averageResponseTime = Double(recent.map(\.responseTimeMs).reduce(0, +)) / Double(recent.count)
             let retrySuccessRate = retryRecords.isEmpty ? 0 : Double(retrySuccessCount) / Double(retryRecords.count)
             let feedbackTarget = bucketRecords.reversed().first { !$0.isCorrect } ??
                 bucketRecords.max(by: { $0.responseTimeMs < $1.responseTimeMs })
@@ -3588,243 +3619,21 @@ private struct AnalyticsEngine {
             return AnalyticsStageSummary(
                 id: key.id,
                 title: key.title(in: language),
-                accuracy: Double(correctCount) / Double(bucketRecords.count),
+                accuracy: Double(correctCount) / Double(recent.count),
                 averageResponseTimeMs: averageResponseTime,
                 retrySuccessRate: retrySuccessRate,
-                attempts: bucketRecords.count,
-                feedbackTarget: feedbackTarget
+                attempts: recent.count,
+                feedbackTarget: feedbackTarget,
+                correctFirstAttempts: correctCount,
+                retryAttempts: retryRecords.count,
+                previousAccuracy: previous.count >= 6 && recent.count >= 6
+                    ? Double(previous.filter(\.isCorrect).count) / Double(previous.count) : nil
             )
         }
-    }
-
-    func suggestions(in language: AppLanguage) -> [String] {
-        let summaries = stageSummaries(in: language)
-        var results: [AnalyticsInsight] = []
-
-        if let weakestAccuracy = summaries
-            .filter({ $0.attempts >= 6 && $0.accuracy < 0.8 })
-            .min(by: { $0.accuracy < $1.accuracy }) {
-            results.append(
-                .init(
-                    priority: 1000 + Int((1 - weakestAccuracy.accuracy) * 100),
-                    text: localizedWeakAccuracy(for: weakestAccuracy, language: language)
-                )
-            )
-        }
-
-        if let weakestRetry = summaries
-            .filter({ $0.attempts >= 8 && $0.retrySuccessRate < 0.55 })
-            .sorted(by: { $0.retrySuccessRate < $1.retrySuccessRate })
-            .first(where: { summary in
-                !results.contains(where: { $0.text.contains(summary.title) })
-            }) {
-            results.append(
-                .init(
-                    priority: 800 + Int((1 - weakestRetry.retrySuccessRate) * 100),
-                    text: localizedWeakRetry(for: weakestRetry, language: language)
-                )
-            )
-        }
-
-        if let slowFluent = summaries
-            .filter({ $0.attempts >= 6 && $0.accuracy >= 0.82 && $0.averageResponseTimeMs >= 3600 })
-            .max(by: { $0.averageResponseTimeMs < $1.averageResponseTimeMs }) {
-            results.append(
-                .init(
-                    priority: 500 + Int((slowFluent.averageResponseTimeMs / 1000).rounded()),
-                    text: localizedSlowFluency(for: slowFluent, language: language)
-                )
-            )
-        }
-
-        if results.isEmpty,
-           let strongest = summaries
-            .filter({ $0.attempts >= 6 })
-            .max(by: {
-                ($0.accuracy, -$0.averageResponseTimeMs) < ($1.accuracy, -$1.averageResponseTimeMs)
-            }) {
-            results.append(
-                .init(
-                    priority: 100,
-                    text: localizedStrengthSummary(for: strongest, language: language)
-                )
-            )
-        }
-
-        if results.isEmpty, !records.isEmpty {
-            results.append(
-                .init(
-                    priority: 0,
-                    text: localizedSuggestion("Keep playing to unlock personalized math skill insights", language: language)
-                )
-            )
-        }
-
-        return results
-            .sorted { $0.priority > $1.priority }
-            .map(\.text)
-            .prefix(4)
-            .map { $0 }
     }
 
     private var stageBuckets: [AnalyticsBucketKey: [AnalyticsRecord]] {
-        Dictionary(grouping: records) { AnalyticsBucketKey(record: $0) }
-    }
-
-    private var overallStats: Stats? {
-        makeStats(from: records)
-    }
-
-    private func stats(for stage: DifficultyStage) -> Stats? {
-        makeStats(from: records.filter { $0.stage == stage })
-    }
-
-    private func groupedStats(for group: AnalyticsSkillGroup) -> Stats? {
-        makeStats(from: records.filter { group.matches($0) })
-    }
-
-    private var patternImproving: Bool {
-        let patternRecords = records.filter { $0.stage == .pattern && $0.isCorrect }
-        guard patternRecords.count >= 10 else { return false }
-
-        let recent = Array(patternRecords.suffix(10))
-        let previous = Array(patternRecords.dropLast(10).suffix(10))
-        guard !previous.isEmpty else { return false }
-
-        guard let recentStats = makeStats(from: recent),
-              let previousStats = makeStats(from: previous) else {
-            return false
-        }
-
-        return recentStats.accuracy >= previousStats.accuracy + 0.1 ||
-            recentStats.averageResponseTimeMs <= previousStats.averageResponseTimeMs - 500
-    }
-
-    private func makeStats(from records: [AnalyticsRecord]) -> Stats? {
-        guard !records.isEmpty else { return nil }
-
-        let correctCount = records.filter(\.isCorrect).count
-        let averageResponseTime = Double(records.map(\.responseTimeMs).reduce(0, +)) / Double(records.count)
-
-        return Stats(
-            accuracy: Double(correctCount) / Double(records.count),
-            averageResponseTimeMs: averageResponseTime,
-            attempts: records.count
-        )
-    }
-
-    private struct Stats {
-        let accuracy: Double
-        let averageResponseTimeMs: Double
-        let attempts: Int
-    }
-
-    private struct AnalyticsInsight {
-        let priority: Int
-        let text: String
-    }
-
-    private func localizedWeakAccuracy(for summary: AnalyticsStageSummary, language: AppLanguage) -> String {
-        switch language {
-        case .english:
-            return "Needs practice: \(summary.title) only \(percent(summary.accuracy)) correct on the first try."
-        case .german:
-            return "Mehr üben: \(summary.title) aktuell nur \(percent(summary.accuracy)) im ersten Versuch richtig."
-        }
-    }
-
-    private func localizedWeakRetry(for summary: AnalyticsStageSummary, language: AppLanguage) -> String {
-        switch language {
-        case .english:
-            return "Still shaky after mistakes: \(summary.title) only \(percent(summary.retrySuccessRate)) correct on retry."
-        case .german:
-            return "Nach Fehlern noch unsicher: \(summary.title) im Zweitversuch nur \(percent(summary.retrySuccessRate)) richtig."
-        }
-    }
-
-    private func localizedSlowFluency(for summary: AnalyticsStageSummary, language: AppLanguage) -> String {
-        switch language {
-        case .english:
-            return "Understood, not fluent yet: \(summary.title) averages \(seconds(summary.averageResponseTimeMs))."
-        case .german:
-            return "Inhalt verstanden, aber noch nicht flüssig: \(summary.title) dauert im Schnitt \(seconds(summary.averageResponseTimeMs))."
-        }
-    }
-
-    private func localizedStrengthSummary(for summary: AnalyticsStageSummary, language: AppLanguage) -> String {
-        switch language {
-        case .english:
-            return "Strongest right now: \(summary.title) with \(percent(summary.accuracy)) first-try accuracy."
-        case .german:
-            return "Aktuell am sichersten: \(summary.title) mit \(percent(summary.accuracy)) im ersten Versuch."
-        }
-    }
-
-    private func percent(_ value: Double) -> String {
-        "\(Int((value * 100).rounded()))%"
-    }
-
-    private func seconds(_ value: Double) -> String {
-        String(format: "%.1fs", value / 1000)
-    }
-
-    private func localizedSuggestion(_ suggestion: String, language: AppLanguage) -> String {
-        switch (language, suggestion) {
-        case (.english, "Knows facts but is slow"):
-            return "Answers are mostly correct, but response time is still slow"
-        case (.english, "Fast on single-digit, weak on crossing 10"):
-            return "Single-digit tasks are quick; problems that cross 10 are less secure"
-        case (.english, "Strong with tens place, weak on ones place"):
-            return "Tasks with tens are going better than tasks with ones"
-        case (.english, "Pattern recognition improving"):
-            return "Pattern tasks are improving"
-        case (.english, "Needs more practice before carry/borrow"):
-            return "Carry and borrow problems are still weaker than simpler two-digit tasks"
-        case (.english, "Ready to expand beyond intro multiplication facts"):
-            return "Intro multiplication facts are secure enough for harder facts"
-        case (.english, "Knows the table but needs more multiplication fluency"):
-            return "This table is mostly correct, but answers are still slow"
-        case (.english, "Needs more practice with swapped multiplication order"):
-            return "Swapped multiplication order is still less secure"
-        case (.english, "Keep playing to unlock personalized math skill insights"):
-            return "More rounds are needed before the app can give reliable practice advice"
-        case (.german, "Knows facts but is slow"):
-            return "Die Aufgaben sind meist richtig, aber die Antwortzeit ist noch langsam"
-        case (.german, "Fast on single-digit, weak on crossing 10"):
-            return "Einstellige Aufgaben gehen schnell, Aufgaben mit Überschreiten der 10 noch unsicher"
-        case (.german, "Strong with tens place, weak on ones place"):
-            return "Aufgaben mit Zehnern gelingen besser als Aufgaben mit Einern"
-        case (.german, "Pattern recognition improving"):
-            return "Zahlenmuster werden sicherer gelöst"
-        case (.german, "Needs more practice before carry/borrow"):
-            return "Aufgaben mit Übertrag sind noch unsicherer als einfachere zweistellige Aufgaben"
-        case (.german, "Ready to expand beyond intro multiplication facts"):
-            return "Die ersten Einmaleins-Aufgaben sitzen sicher genug für schwierigere Aufgaben"
-        case (.german, "Knows the table but needs more multiplication fluency"):
-            return "Diese Reihe ist meist richtig, aber die Antworten kommen noch langsam"
-        case (.german, "Needs more practice with swapped multiplication order"):
-            return "Aufgaben mit vertauschten Faktoren sind noch unsicher"
-        case (.german, "Keep playing to unlock personalized math skill insights"):
-            return "Für verlässliche Hinweise werden noch mehr gespielte Aufgaben gebraucht"
-        default:
-            return suggestion
-        }
-    }
-}
-
-private enum AnalyticsSkillGroup {
-    case tensPlace
-    case onesPlace
-
-    func matches(_ record: AnalyticsRecord) -> Bool {
-        switch self {
-        case .tensPlace:
-            return record.stage == .digitPlusWholeTens ||
-                (record.stage == .pattern && record.patternPhase == .tensProgression)
-        case .onesPlace:
-            return record.stage == .doubleDigitPlusSingleNoCrossing ||
-                (record.stage == .pattern && record.patternPhase == .onesProgression)
-        }
+        Dictionary(grouping: records.filter { $0.measurementVersion == 2 }) { AnalyticsBucketKey(record: $0) }
     }
 }
 
@@ -3907,7 +3716,15 @@ private struct AnalyticsBucketKey: Hashable {
     }
 
     func title(in language: AppLanguage) -> String {
-        "\(mode.title(in: language)): \(category.title(in: language))"
+        let skill: String
+        switch (mode, category, language) {
+        case (.subtraction, .digitPlusWholeTens, .english): skill = "Subtracting ones to reach a ten"
+        case (.subtraction, .digitPlusWholeTens, .german): skill = "Einer bis zum Zehner abziehen"
+        case (.subtraction, .doubleDigitPlusSingleNoCrossing, .english): skill = "Subtracting ones without crossing a ten"
+        case (.subtraction, .doubleDigitPlusSingleNoCrossing, .german): skill = "Einer ohne Zehnerübergang abziehen"
+        default: skill = category.title(in: language)
+        }
+        return "\(mode.title(in: language)): \(skill)"
     }
 
     static let displayOrder: [AnalyticsBucketKey] = [
@@ -3954,21 +3771,21 @@ private extension AnalyticsBucketCategory {
     func title(in language: AppLanguage) -> String {
         switch (language, self) {
         case (.english, .singleDigit):
-            return "Single Digit"
+            return "Small numbers"
         case (.english, .complementsTo10):
-            return "Complements to 10"
+            return "Missing numbers to 10"
         case (.english, .crossing10):
             return "Crossing 10"
         case (.english, .complementsTo20):
-            return "Complements to 20"
+            return "Missing numbers to 20"
         case (.english, .digitPlusWholeTens):
-            return "Digit + Whole Tens"
+            return "Adding whole tens"
         case (.english, .doubleDigitPlusSingleNoCrossing):
-            return "Double Digit + Single No Crossing"
+            return "Adding ones without crossing a ten"
         case (.english, .twoDigitNoCarryBorrow):
-            return "Two Digit No Carry/Borrow"
+            return "Two-digit numbers without crossing a ten"
         case (.english, .twoDigitWithCarryBorrow):
-            return "Two Digit With Carry/Borrow"
+            return "Two-digit numbers across tens"
         case (.english, .patternTens):
             return "Pattern: Tens Progression"
         case (.english, .patternOnes):
@@ -3978,7 +3795,7 @@ private extension AnalyticsBucketCategory {
         case (.english, .mixed):
             return "Mixed Advanced"
         case (.english, .multiplicationIntro):
-            return "Intro Facts"
+            return "First number facts"
         case (.english, .multiplicationTable):
             return "Full Table"
         case (.english, .multiplicationSwap):
@@ -3994,9 +3811,9 @@ private extension AnalyticsBucketCategory {
         case (.german, .complementsTo20):
             return "Ergänzungen bis 20"
         case (.german, .digitPlusWholeTens):
-            return "Ziffer + volle Zehner"
+            return "Volle Zehner addieren"
         case (.german, .doubleDigitPlusSingleNoCrossing):
-            return "Zweistellig + einstellig ohne Übergang"
+            return "Einer ohne Zehnerübergang addieren"
         case (.german, .twoDigitNoCarryBorrow):
             return "Zweistellig ohne Übertrag"
         case (.german, .twoDigitWithCarryBorrow):
@@ -4010,7 +3827,7 @@ private extension AnalyticsBucketCategory {
         case (.german, .mixed):
             return "Fortgeschritten gemischt"
         case (.german, .multiplicationIntro):
-            return "Erste Fakten"
+            return "Erste Aufgaben"
         case (.german, .multiplicationTable):
             return "Ganze Reihe"
         case (.german, .multiplicationSwap):

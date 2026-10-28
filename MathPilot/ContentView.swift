@@ -84,6 +84,33 @@ struct ContentView: View {
                             scoreText: copy.score(gameManager.score),
                             problemText: gameManager.currentProblem
                         )
+                        if let progress = gameManager.missionProgressText, !gameManager.missionCompleted {
+                            VStack(spacing: 5) {
+                                Text(progress).font(.subheadline.bold())
+                                HStack(spacing: 5) {
+                                    ForEach(0..<5) { phase in
+                                        Capsule()
+                                            .fill(phase <= gameManager.missionPhaseIndex ? Color.yellow : Color.white.opacity(0.25))
+                                            .frame(width: 26, height: 5)
+                                    }
+                                    Image(systemName: "flag.checkered")
+                                }
+                                if !gameManager.missionFeedbackVisible, let hint = gameManager.missionStrategyHint {
+                                    Text(hint).font(.caption)
+                                }
+                            }
+                            .foregroundStyle(.white)
+                            .padding(8)
+                            .background(.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 12))
+                            .accessibilityElement(children: .combine)
+                        }
+                        if let progress = gameManager.feedbackPracticeProgress, !gameManager.gameOver {
+                            Text(copy.feedbackProgress(current: progress.current, total: progress.total))
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.white)
+                                .padding(8)
+                                .background(.black.opacity(0.65), in: Capsule())
+                        }
                     }
 
                     Spacer()
@@ -125,7 +152,7 @@ struct ContentView: View {
 
                 if gameManager.gameOver {
                     VStack(spacing: 12) {
-                        Text(copy.gameOver)
+                        Text(gameManager.feedbackPracticeResult == nil ? copy.gameOver : copy.feedbackPracticeComplete)
                             .font(.largeTitle)
                             .fontWeight(.black)
                             .foregroundColor(.red)
@@ -136,7 +163,7 @@ struct ContentView: View {
 
                         if let result = gameManager.feedbackPracticeResult {
                             VStack(spacing: 4) {
-                                Text(copy.feedbackPracticeComplete)
+                                Text(copy.feedbackPracticeOutcome(result))
                                     .font(.headline.weight(.black))
                                     .foregroundColor(.yellow)
                                 Text(copy.feedbackPracticeDoublePoints(result))
@@ -219,12 +246,13 @@ struct ContentView: View {
                 }
 
                 if let session = gameManager.activeSpecialMission,
+                   gameManager.missionFeedbackVisible,
                    let hint = gameManager.missionStrategyHint {
                     MissionHintOverlay(
                         title: copy.specialMissionTitle(session.mission),
-                        hint: gameManager.bossFightState == .intro
-                            ? copy.bossIncoming
-                            : (session.phase == .unlockStrategy ? copy.specialMissionUnlockText(session.mission) : hint)
+                        hint: hint,
+                        buttonTitle: copy.continueButton,
+                        onContinue: gameManager.continueMission
                     )
                     .zIndex(35)
                 }
@@ -320,7 +348,6 @@ struct ContentView: View {
                 AnalyticsView(
                     language: appSettings.language,
                     stageSummaries: gameManager.analyticsStageSummaries(in: appSettings.language),
-                    suggestions: gameManager.analyticsSuggestions(in: appSettings.language),
                     onStartFeedbackPractice: { record in
                         showingAnalytics = false
                         gameManager.startFeedbackPractice(from: record)
@@ -701,6 +728,8 @@ private struct WelcomeOverlay: View {
                     .padding(14)
                     .background(Color.blue.opacity(0.9), in: Circle())
             }
+            .accessibilityLabel(copy.analyticsTitle)
+            .accessibilityIdentifier("openFeedback")
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
             .padding(.trailing, 24)
             .padding(.bottom, 24)
@@ -840,6 +869,7 @@ private struct CurriculumSettingsView: View {
                     } label: {
                         Label(copy.specialMissions, systemImage: "star.circle.fill")
                     }
+                    .accessibilityIdentifier("openMissions")
 
                     ForEach(SpecialMissionID.allCases) { mission in
                         Toggle(
@@ -1205,6 +1235,7 @@ private struct SpecialMissionRow: View {
                 Spacer()
 
                 Button(copy.startMission, action: onStart)
+                    .accessibilityIdentifier("startMission-\(mission.rawValue)")
                     .buttonStyle(.borderedProminent)
                     .disabled(!isEnabled)
             }
@@ -1240,6 +1271,8 @@ private extension SpecialMissionID {
 private struct MissionHintOverlay: View {
     let title: String
     let hint: String
+    let buttonTitle: String
+    let onContinue: () -> Void
 
     var body: some View {
         VStack(spacing: 6) {
@@ -1251,13 +1284,17 @@ private struct MissionHintOverlay: View {
                 .font(.title3.weight(.black))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
+            Button(buttonTitle, action: onContinue)
+                .accessibilityIdentifier("continueMission")
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 14)
         .background(Color.black.opacity(0.68), in: RoundedRectangle(cornerRadius: 18))
         .padding(.horizontal, 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -1300,61 +1337,79 @@ private struct MissionCompleteOverlay: View {
 private struct AnalyticsView: View {
     let language: AppLanguage
     let stageSummaries: [AnalyticsStageSummary]
-    let suggestions: [String]
     let onStartFeedbackPractice: (AnalyticsRecord) -> Void
     let onResetStatistics: () -> Void
     @Environment(\.dismiss) private var dismiss
 
-    var body: some View {
-        let copy = AppCopy(language: language)
+    private var copy: AppCopy { AppCopy(language: language) }
+    private var focus: AnalyticsStageSummary? {
+        let eligible = stageSummaries.filter { $0.attempts >= 6 && $0.feedbackTarget != nil }
+        return eligible.sorted {
+            if $0.accuracy != $1.accuracy { return $0.accuracy < $1.accuracy }
+            return $0.attempts > $1.attempts
+        }.first
+    }
 
+    var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(copy.suggestions)
-                            .font(.title3.weight(.black))
+                VStack(alignment: .leading, spacing: 24) {
+                    Text(copy.feedbackWindow)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
 
-                        if suggestions.isEmpty {
-                            Text(copy.noAnalyticsYet)
-                                .foregroundColor(.secondary)
-                        } else {
-                            ForEach(suggestions, id: \.self) { suggestion in
-                                Text(suggestion)
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 12)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(Color.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
-                            }
+                    if let strongest = stageSummaries.filter({ $0.attempts >= 6 && $0.accuracy >= 0.8 })
+                        .max(by: { $0.accuracy < $1.accuracy }) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label(copy.goodAt, systemImage: "checkmark.circle.fill")
+                                .font(.headline).foregroundStyle(.green)
+                            Text(strongest.title).font(.headline)
+                            Text(copy.feedbackEvidence(strongest))
                         }
                     }
 
-                    if !practiceRecommendations.isEmpty {
+                    if let focus, let target = focus.feedbackTarget {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text(copy.recommendedPractice)
-                                .font(.title3.weight(.black))
-
-                            ForEach(practiceRecommendations) { recommendation in
-                                AnalyticsPracticeCard(recommendation: recommendation) {
-                                    dismiss()
-                                    onStartFeedbackPractice(recommendation.feedbackTarget)
-                                }
+                            Text(focus.accuracy < 0.8 ? copy.feedbackNextStep : copy.feedbackReview)
+                                .font(.title3.bold())
+                            Text(focus.title).font(.headline)
+                            Text(copy.feedbackEvidence(focus))
+                                .foregroundStyle(.secondary)
+                            Text(target.problem).font(.title2.bold())
+                            if !target.isCorrect {
+                                Text(copy.feedbackPreviousAnswer(target))
+                                    .font(.subheadline)
                             }
+                            Text(copy.feedbackStrategy(for: target))
+                                .font(.body)
+                            Button {
+                                dismiss()
+                                onStartFeedbackPractice(target)
+                            } label: {
+                                Label(copy.feedbackStartPractice, systemImage: "play.fill")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .accessibilityIdentifier("startFeedbackPractice")
+                            Text(copy.feedbackPracticeExplanation).font(.caption)
+                                .foregroundStyle(.secondary)
                         }
+                        .padding(18)
+                        .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 16))
+                    } else {
+                        Text(copy.feedbackCollecting).foregroundStyle(.secondary)
                     }
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(copy.stageSummary)
-                            .font(.title3.weight(.black))
-
-                        ForEach(stageSummaries) { summary in
-                            AnalyticsSummaryCard(language: language, summary: summary)
+                    if !stageSummaries.isEmpty {
+                        DisclosureGroup(copy.feedbackDetails) {
+                            VStack(alignment: .leading, spacing: 16) {
+                                ForEach(stageSummaries) { summary in
+                                    AnalyticsSummaryCard(language: language, summary: summary)
+                                }
+                            }.padding(.top, 12)
                         }
                     }
-                }
-                .padding(20)
+                }.padding(20)
             }
             .navigationTitle(copy.analyticsTitle)
             .toolbar {
@@ -1364,168 +1419,11 @@ private struct AnalyticsView: View {
                         onResetStatistics()
                     }
                 }
-
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(copy.done) {
-                        dismiss()
-                    }
+                    Button(copy.done) { dismiss() }
                 }
             }
         }
-    }
-
-    private var practiceRecommendations: [AnalyticsPracticeRecommendation] {
-        stageSummaries.compactMap { summary in
-            guard summary.attempts >= 6 else { return nil }
-            guard let feedbackTarget = summary.feedbackTarget else { return nil }
-
-            if summary.accuracy < 0.75 {
-                return .init(
-                    priority: Int((1 - summary.accuracy) * 1000),
-                    title: summary.title,
-                    headline: localizedPracticeHeadline(kind: .accuracy),
-                    detail: localizedPracticeDetail(for: summary, kind: .accuracy),
-                    action: localizedPracticeAction(for: summary, kind: .accuracy),
-                    feedbackTarget: feedbackTarget
-                )
-            }
-
-            if summary.accuracy >= 0.82, summary.averageResponseTimeMs >= 3600 {
-                return .init(
-                    priority: Int(summary.averageResponseTimeMs),
-                    title: summary.title,
-                    headline: localizedPracticeHeadline(kind: .fluency),
-                    detail: localizedPracticeDetail(for: summary, kind: .fluency),
-                    action: localizedPracticeAction(for: summary, kind: .fluency),
-                    feedbackTarget: feedbackTarget
-                )
-            }
-
-            if summary.retrySuccessRate < 0.55, summary.attempts >= 8 {
-                return .init(
-                    priority: Int((1 - summary.retrySuccessRate) * 900),
-                    title: summary.title,
-                    headline: localizedPracticeHeadline(kind: .retry),
-                    detail: localizedPracticeDetail(for: summary, kind: .retry),
-                    action: localizedPracticeAction(for: summary, kind: .retry),
-                    feedbackTarget: feedbackTarget
-                )
-            }
-
-            return nil
-        }
-        .sorted { $0.priority > $1.priority }
-        .prefix(4)
-        .map { $0 }
-    }
-
-    private func localizedPracticeHeadline(kind: AnalyticsPracticeKind) -> String {
-        switch (language, kind) {
-        case (.english, .accuracy):
-            return "Needs first-try accuracy"
-        case (.english, .fluency):
-            return "Needs faster recall"
-        case (.english, .retry):
-            return "Needs stronger recovery after mistakes"
-        case (.german, .accuracy):
-            return "Mehr Sicherheit im Erstversuch"
-        case (.german, .fluency):
-            return "Schnelleres Abrufen üben"
-        case (.german, .retry):
-            return "Nach Fehlern noch unsicher"
-        }
-    }
-
-    private func localizedPracticeDetail(for summary: AnalyticsStageSummary, kind: AnalyticsPracticeKind) -> String {
-        switch (language, kind) {
-        case (.english, .accuracy):
-            return "First-try accuracy: \(percent(summary.accuracy))."
-        case (.english, .fluency):
-            return "Average answer time: \(seconds(summary.averageResponseTimeMs))."
-        case (.english, .retry):
-            return "Correct after a mistake: \(percent(summary.retrySuccessRate))."
-        case (.german, .accuracy):
-            return "Trefferquote im Erstversuch: \(percent(summary.accuracy))."
-        case (.german, .fluency):
-            return "Durchschnittliche Antwortzeit: \(seconds(summary.averageResponseTimeMs))."
-        case (.german, .retry):
-            return "Richtig nach einem Fehler: \(percent(summary.retrySuccessRate))."
-        }
-    }
-
-    private func localizedPracticeAction(for summary: AnalyticsStageSummary, kind: AnalyticsPracticeKind) -> String {
-        switch (language, kind) {
-        case (.english, .accuracy):
-            return "Repeat short sets of this exact skill."
-        case (.english, .fluency):
-            return "Keep this skill level and aim for quicker answers."
-        case (.english, .retry):
-            return "Repeat the same skill right after an error."
-        case (.german, .accuracy):
-            return "Kurze Wiederholungen genau dieses Bereichs einplanen."
-        case (.german, .fluency):
-            return "Bei diesem Niveau bleiben und auf schnelleres Antworten zielen."
-        case (.german, .retry):
-            return "Nach einem Fehler genau dieselbe Kompetenz direkt wiederholen."
-        }
-    }
-
-    private func percent(_ value: Double) -> String {
-        "\(Int((value * 100).rounded()))%"
-    }
-
-    private func seconds(_ value: Double) -> String {
-        String(format: "%.1fs", value / 1000)
-    }
-}
-
-private enum AnalyticsPracticeKind {
-    case accuracy
-    case fluency
-    case retry
-}
-
-private struct AnalyticsPracticeRecommendation: Identifiable {
-    let id = UUID()
-    let priority: Int
-    let title: String
-    let headline: String
-    let detail: String
-    let action: String
-    let feedbackTarget: AnalyticsRecord
-}
-
-private struct AnalyticsPracticeCard: View {
-    let recommendation: AnalyticsPracticeRecommendation
-    let onStartFeedbackPractice: () -> Void
-
-    var body: some View {
-        Button(action: onStartFeedbackPractice) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(recommendation.title)
-                    .font(.headline.weight(.bold))
-
-                Text(recommendation.headline)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.primary)
-
-                Text(recommendation.detail)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                Text(recommendation.action)
-                    .font(.caption)
-                    .foregroundColor(.primary)
-
-                Label(recommendation.feedbackTarget.problem, systemImage: "play.circle.fill")
-                    .font(.caption.weight(.bold))
-                    .foregroundColor(.orange)
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 16))
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -1535,128 +1433,17 @@ private struct AnalyticsSummaryCard: View {
 
     var body: some View {
         let copy = AppCopy(language: language)
-        let assessment = localizedAssessment
-
-        VStack(alignment: .leading, spacing: 10) {
-            Text(summary.title)
-                .font(.headline.weight(.bold))
-
-            HStack {
-                metric(title: copy.accuracy, value: percent(summary.accuracy))
-                Spacer()
-                metric(title: copy.averageTime, value: seconds(summary.averageResponseTimeMs))
-                Spacer()
-                metric(title: copy.retry, value: percent(summary.retrySuccessRate))
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(copy.attempts(summary.attempts))
-                    .font(.caption.weight(.medium))
-                    .foregroundColor(.secondary)
-
-                Text("\(copy.goodAt): \(assessment.strength)")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.primary)
-
-                Text("\(copy.practiceMore): \(assessment.practice)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            Text(summary.title).font(.headline)
+            Text(copy.feedbackEvidence(summary))
+            Text(copy.feedbackTrend(summary)).foregroundStyle(.secondary)
+            Text(copy.feedbackTiming(summary.averageResponseTimeMs))
+                .font(.caption).foregroundStyle(.secondary)
+            Text(copy.feedbackRetry(summary)).font(.caption).foregroundStyle(.secondary)
         }
-        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16))
-    }
-
-    private func metric(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundColor(.secondary)
-            Text(value)
-                .font(.subheadline.weight(.bold))
-        }
-    }
-
-    private func percent(_ value: Double) -> String {
-        "\(Int((value * 100).rounded()))%"
-    }
-
-    private func seconds(_ value: Double) -> String {
-        String(format: "%.1fs", value / 1000)
-    }
-
-    private var localizedAssessment: (strength: String, practice: String) {
-        switch language {
-        case .english:
-            return (englishStrength, englishPractice)
-        case .german:
-            return (germanStrength, germanPractice)
-        }
-    }
-
-    private var englishStrength: String {
-        if summary.accuracy >= 0.9, summary.averageResponseTimeMs <= 3000 {
-            return "fast and secure"
-        }
-
-        if summary.accuracy >= 0.82 {
-            return "first answers are usually right"
-        }
-
-        if summary.retrySuccessRate >= 0.65, summary.attempts >= 8 {
-            return "mistakes are often corrected right away"
-        }
-
-        return "basic understanding is there"
-    }
-
-    private var englishPractice: String {
-        if summary.accuracy < 0.75 {
-            return "Needs more first-try accuracy."
-        }
-
-        if summary.averageResponseTimeMs > 3600, summary.accuracy >= 0.82 {
-            return "Needs faster recall."
-        }
-
-        if summary.retrySuccessRate < 0.55, summary.attempts >= 8 {
-            return "Needs stronger correction after mistakes."
-        }
-
-        return "Only light review needed."
-    }
-
-    private var germanStrength: String {
-        if summary.accuracy >= 0.9, summary.averageResponseTimeMs <= 3000 {
-            return "schnell und sicher"
-        }
-
-        if summary.accuracy >= 0.82 {
-            return "die erste Antwort ist meist richtig"
-        }
-
-        if summary.retrySuccessRate >= 0.65, summary.attempts >= 8 {
-            return "Fehler werden oft direkt korrigiert"
-        }
-
-        return "Grundverstaendnis ist vorhanden"
-    }
-
-    private var germanPractice: String {
-        if summary.accuracy < 0.75 {
-            return "Mehr Sicherheit im Erstversuch nötig."
-        }
-
-        if summary.averageResponseTimeMs > 3600, summary.accuracy >= 0.82 {
-            return "Schnelleres Abrufen nötig."
-        }
-
-        if summary.retrySuccessRate < 0.55, summary.attempts >= 8 {
-            return "Nach Fehlern mehr Stabilität nötig."
-        }
-
-        return "Nur leichte Wiederholung nötig."
     }
 }
 

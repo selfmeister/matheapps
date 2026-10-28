@@ -274,9 +274,9 @@ struct AppCopy {
     var feedbackPracticeComplete: String {
         switch language {
         case .english:
-            return "Feedback Challenge Complete"
+            return "Practice complete"
         case .german:
-            return "Feedback-Aufgabe geschafft"
+            return "Übungsrunde geschafft"
         }
     }
 
@@ -1155,6 +1155,107 @@ struct AppCopy {
             return "less review"
         case .german:
             return "weniger Wiederholung"
+        }
+    }
+}
+
+extension AppCopy {
+    private func feedbackText(_ english: String, _ german: String) -> String {
+        language == .german ? german : english
+    }
+
+    func feedbackProgress(current: Int, total: Int) -> String {
+        feedbackText("Practice: problem \(current) of \(total)", "Übung: Aufgabe \(current) von \(total)")
+    }
+    var feedbackWindow: String {
+        feedbackText("Based on your latest 20 problems in each skill. First attempts and retries are counted separately.",
+                     "Grundlage sind deine letzten 20 Aufgaben pro Bereich. Erstversuche und Wiederholungen werden getrennt gezählt.")
+    }
+    var feedbackNextStep: String { feedbackText("Your next step", "Dein nächster Schritt") }
+    var feedbackReview: String { feedbackText("Keep practising", "Bleib dran") }
+    var feedbackStartPractice: String { feedbackText("Practise 5 problems", "5 Aufgaben üben") }
+    var feedbackDetails: String { feedbackText("Progress and details", "Fortschritt und Details") }
+    var feedbackCollecting: String {
+        feedbackText("Solve at least 6 problems in one skill to get a practice suggestion. The new feedback counts first attempts more precisely, so earlier results may not appear here.",
+                     "Löse mindestens 6 Aufgaben in einem Bereich, um einen Übungsvorschlag zu erhalten. Das neue Feedback zählt Erstversuche genauer. Frühere Ergebnisse erscheinen deshalb möglicherweise noch nicht hier.")
+    }
+    var feedbackPracticeExplanation: String {
+        feedbackText("Start with this problem, then practise similar ones. Take your time; you can try again after a mistake.",
+                     "Starte mit dieser Aufgabe und übe danach ähnliche Aufgaben. Lass dir Zeit: Nach einem Fehler kannst du es erneut versuchen.")
+    }
+    func feedbackEvidence(_ summary: AnalyticsStageSummary) -> String {
+        feedbackText("You solved \(summary.correctFirstAttempts) of your last \(summary.attempts) problems correctly on the first try.",
+                     "Du hast \(summary.correctFirstAttempts) deiner letzten \(summary.attempts) Aufgaben im ersten Versuch richtig gelöst.")
+    }
+    func feedbackPreviousAnswer(_ record: AnalyticsRecord) -> String {
+        if record.chosenAnswer == -1 {
+            return feedbackText("This problem went unanswered last time. The correct answer is \(record.correctAnswer).",
+                                "Diese Aufgabe blieb zuletzt unbeantwortet. Die richtige Antwort ist \(record.correctAnswer).")
+        }
+        return feedbackText("On an earlier attempt you chose \(record.chosenAnswer). The correct answer is \(record.correctAnswer).",
+                            "Bei einem früheren Versuch hast du \(record.chosenAnswer) gewählt. Die richtige Antwort ist \(record.correctAnswer).")
+    }
+    func feedbackTrend(_ summary: AnalyticsStageSummary) -> String {
+        guard let previous = summary.previousAccuracy else {
+            return feedbackText("More results are needed to compare your progress.", "Für einen Vergleich deines Fortschritts fehlen noch Ergebnisse.")
+        }
+        let before = Int((previous * 100).rounded())
+        let now = Int((summary.accuracy * 100).rounded())
+        return feedbackText("First-try accuracy: \(before)% in the previous set → \(now)% in the latest set (up to 20 problems each).",
+                            "Im ersten Versuch richtig: zuvor \(before)% → zuletzt \(now)% (jeweils bis zu 20 Aufgaben).")
+    }
+    func feedbackTiming(_ milliseconds: Double) -> String {
+        let seconds = String(format: "%.1f", locale: Locale(identifier: language == .german ? "de_DE" : "en_US"), milliseconds / 1000)
+        return feedbackText("Average time to first attempt: \(seconds) s. Includes waiting and gameplay; this is not a measure of recall speed.",
+                            "Durchschnitt bis zum Erstversuch: \(seconds) s. Einschließlich Wartezeit und Spielablauf; kein Maß für deine Rechengeschwindigkeit.")
+    }
+    func feedbackRetry(_ summary: AnalyticsStageSummary) -> String {
+        guard summary.retryAttempts > 0 else {
+            return feedbackText("No retries recorded in this set.", "In diesem Zeitraum wurden keine Wiederholungsversuche erfasst.")
+        }
+        let correct = Int((summary.retrySuccessRate * Double(summary.retryAttempts)).rounded())
+        return feedbackText("Successful retry attempts: \(correct) of \(summary.retryAttempts).",
+                            "Richtige Wiederholungsversuche: \(correct) von \(summary.retryAttempts).")
+    }
+    func feedbackPracticeOutcome(_ result: FeedbackPracticeResult) -> String {
+        feedbackText("\(result.firstTryCorrect) of \(result.problemCount) correct on the first try",
+                     "\(result.firstTryCorrect) von \(result.problemCount) im ersten Versuch richtig")
+    }
+    func feedbackStrategy(for record: AnalyticsRecord) -> String {
+        let numbers = record.problem.components(separatedBy: CharacterSet.decimalDigits.inverted).compactMap(Int.init)
+        if numbers.count >= 2, record.stage == .complementsTo10 || record.stage == .complementsTo20 {
+            let start = min(numbers[0], numbers[1]), end = max(numbers[0], numbers[1])
+            return feedbackText("Count from \(start) to \(end): \(end - start) steps. Put \(record.correctAnswer) in the gap to check.",
+                                "Zähle von \(start) bis \(end): \(end - start) Schritte. Setze \(record.correctAnswer) zur Probe in die Lücke ein.")
+        }
+        guard numbers.count >= 2 else {
+            return feedbackText("Work in small steps and check your answer with the reverse operation.",
+                                "Rechne in kleinen Schritten und prüfe dein Ergebnis mit der Umkehraufgabe.")
+        }
+        let a = numbers[0], b = numbers[1]
+        switch record.mode {
+        case .addition:
+            if a % 10 > 0, b > 10 - a % 10 {
+                let step = 10 - a % 10
+                return feedbackText("Make the next ten first: split \(b) into \(step) and \(b - step). \(a) + \(step) = \(a + step), then + \(b - step) = \(a + b).",
+                                    "Rechne zuerst zum nächsten Zehner: Zerlege \(b) in \(step) und \(b - step). \(a) + \(step) = \(a + step), dann + \(b - step) = \(a + b).")
+            }
+            return feedbackText("Start at \(a) and add \(b). Check backwards: \(a + b) − \(b) = \(a).",
+                                "Starte bei \(a) und addiere \(b). Prüfe rückwärts: \(a + b) − \(b) = \(a).")
+        case .subtraction:
+            let tens = b / 10 * 10, ones = b % 10
+            if tens > 0 && ones > 0 {
+                return feedbackText("Subtract tens, then ones: \(a) − \(tens) = \(a - tens), then − \(ones) = \(a - b).",
+                                    "Ziehe erst die Zehner ab, dann die Einer: \(a) − \(tens) = \(a - tens), dann − \(ones) = \(a - b).")
+            }
+            return feedbackText("Try counting up: from \(b) to \(a) is \(a - b). Check: \(b) + \(a - b) = \(a).",
+                                "Probiere Ergänzen: Von \(b) bis \(a) fehlen \(a - b). Probe: \(b) + \(a - b) = \(a).")
+        case .multiplication:
+            return feedbackText("Think of \(a) groups of \(b). One fewer group is \(max(0, a - 1)) × \(b) = \(max(0, a - 1) * b); add \(b) to get \(a * b).",
+                                "Denke an \(a) Gruppen mit je \(b). Eine Gruppe weniger: \(max(0, a - 1)) × \(b) = \(max(0, a - 1) * b). Addiere \(b), dann erhältst du \(a * b).")
+        case .division:
+            return feedbackText("Use multiplication to check: \(b) × \(record.correctAnswer) = \(a). How many groups of \(b) fit into \(a)?",
+                                "Nutze die Malaufgabe zur Probe: \(b) × \(record.correctAnswer) = \(a). Wie viele Gruppen mit je \(b) passen in \(a)?")
         }
     }
 }

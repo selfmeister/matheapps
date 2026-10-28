@@ -16,11 +16,11 @@ App is localized in English + German, so provide both localizations.
 | Price | Free |
 | Content rights | none |
 | Age rating | 4+ (complete the questionnaire: no objectionable content, no UGC, no ads) |
-| Kids category | Optional — if enabled, review stricter rules (already compliant: no ads/analytics/external links to kids) |
+| Kids category | Optional — confirm the Kids category requirements before selecting it; learning statistics stay on the device |
 
 ## Description (English, ~4000 char limit)
 
-MathPilot turns math practice into an exciting flight mission for kids.
+MathPilot turns math practice into an exciting mission for kids.
 
 Pilot your jet through a sky full of incoming answers. Read the math
 problem, tap the aircraft carrying the correct answer, and blast it out
@@ -38,13 +38,14 @@ Choose your fighter jet or roll out in a tank — each with its own style.
 BUILT FOR LEARNING
 • Adaptive difficulty that grows with your child
 • Special missions that teach problem-solving strategies
-• A learning dashboard showing progress and suggested practice
+• Concrete feedback with worked examples and five-task practice rounds
 • Celebration moments that keep motivation high
 
 KID-SAFE BY DESIGN
 • No ads, ever
 • No in-app purchases or subscriptions
-• No accounts, no tracking, no analytics
+• No accounts, no tracking, no third-party analytics
+• Learning statistics are stored only on your device
 • Works fully offline — all progress stays on the device
 • English and German languages included
 
@@ -53,7 +54,8 @@ confidence in arithmetic — at home, in the car, or anywhere.
 
 ## Description (Deutsch)
 
-MathPilot verwandelt Kopfrechnen in eine spannende Flugmission für Kinder.
+Mathe muss nicht langweilig sein. Für Kinder, die mit Action leichter zu motivieren 
+sind, kommt hier eine App, die Kopfrechnen trainiert und Spielspaß dabei im Vordergrund behält.
 
 Steuere deinen Jet durch einen Himmel voller Antworten. Lies die
 Rechenaufgabe, tippe auf das Flugzeug mit der richtigen Lösung und
@@ -72,32 +74,31 @@ Wähle deinen Kampfjet oder rolle im Panzer los — jeder mit eigenem Stil.
 FÜRS LERNEN GEBAUT
 • Adaptive Schwierigkeit, die mit deinem Kind wächst
 • Spezialmissionen, die Lösungsstrategien vermitteln
-• Lern-Dashboard mit Fortschritt und Übungsvorschlägen
+• Konkretes Feedback mit Rechenwegen und Übungsrunden mit fünf Aufgaben
 • Belohnungsmomente für dauerhafte Motivation
 
 SICHER FÜR KINDER
 • Keine Werbung
 • Keine In-App-Käufe oder Abos
-• Keine Konten, kein Tracking, keine Analysen
+• Keine Konten, kein Tracking, keine Analyse durch Drittanbieter
+• Lernstatistiken werden ausschließlich auf deinem Gerät gespeichert
 • Funktioniert komplett offline — alle Daten bleiben auf dem Gerät
 • Auf Deutsch und Englisch
 
 Ideal für Grundschulkinder (6–10 Jahre), die Sicherheit im Rechnen
 aufbauen wollen — zu Hause, unterwegs oder überall.
 
-## Keywords (100 chars max, comma-separated, EN field)
+## Keywords (100 bytes max, comma-separated, EN field)
 
-math,kids,arithmetic,addition,subtraction,multiplication,division,learning,education,elementary,times tables,mental math,jet,game
+kids,arithmetic,addition,subtraction,multiplication,division,learning,education,times tables,jet
 
 ## Keywords (DE field)
 
-mathe,kinder,kopfrechnen,addition,subtraktion,multiplikation,division,einmaleins,grundschule,lernen,rechnen,rechenspiel,jet
+mathe,kinder,kopfrechnen,addition,subtraktion,division,einmaleins,grundschule,lernen,rechenspiel
 
 ## Promotional text (170 chars, updatable anytime)
 
-Blast the right answers out of the sky! MathPilot makes addition,
-subtraction, multiplication and division feel like an arcade mission —
-adaptive, ad-free and 100% offline.
+Practise four maths skills with arcade missions, worked examples and five-task practice rounds. Adaptive, ad-free and fully offline. Available in English and German.
 
 ## What's New (v1.0)
 
@@ -110,6 +111,9 @@ progress dashboard. No ads, no tracking — just math and fun.
 - The app is fully self-contained; no login or demo account needed.
 - Tap "Start Game" on the main screen to begin immediately.
 - The app uses only on-device UserDefaults storage; no network calls.
+- Learning statistics and practice recommendations are computed on the device.
+- Feedback is available after at least six first attempts in one skill. The chart button opens feedback; the practice button starts five tasks.
+- English and German can be selected on the main screen.
 - Privacy policy URL: https://selfmeister.github.io/matheapps/MathPilot/PRIVACY_POLICY.html
 - Contact: synth.bueschel0@icloud.com
 
